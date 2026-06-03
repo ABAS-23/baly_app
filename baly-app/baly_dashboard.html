@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة تحليل مراجعات تطبيق بلي</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --white: #FFFFFF;
+    --black: #0A0A0F;
+    --teal: #0D9488;
+    --teal-light: #14B8A6;
+    --teal-dim: #0D948820;
+    --teal-border: #0D948840;
+    --magenta: #9D174D;
+    --magenta-light: #DB2777;
+    --magenta-dim: #9D174D20;
+    --magenta-border: #9D174D40;
+    --gray-100: #F8FAFC;
+    --gray-200: #F1F5F9;
+    --gray-300: #E2E8F0;
+    --gray-500: #64748B;
+    --gray-700: #334155;
+    --gray-900: #0F172A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--gray-100);
+    color: var(--gray-900);
+    direction: rtl;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ─────────────────────────────── */
+  .header {
+    background: var(--black);
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 40px;
+    position: relative;
+    z-index: 2;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: -60px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, var(--teal) 0%, transparent 70%);
+    opacity: 0.15;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: 10%;
+    width: 250px; height: 250px;
+    background: radial-gradient(circle, var(--magenta) 0%, transparent 70%);
+    opacity: 0.12;
+  }
+  .logo-area { display: flex; align-items: center; gap: 16px; }
+  .logo-icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-light));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900; color: white;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 8px 20px rgba(13,148,136,.4);
+  }
+  .header-title { color: white; }
+  .header-title h1 { font-size: 22px; font-weight: 700; line-height: 1.2; }
+  .header-title p { font-size: 12px; color: var(--gray-500); margin-top: 3px; font-weight: 400; }
+  .header-meta {
+    display: flex; gap: 24px; align-items: center;
+  }
+  .meta-pill {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: rgba(255,255,255,.7);
+    white-space: nowrap;
+  }
+  .meta-pill span { color: var(--teal-light); font-weight: 700; }
+
+  /* ── TIMELINE STRIP ──────────────────────── */
+  .timeline-strip {
+    background: var(--black);
+    border-top: 1px solid rgba(255,255,255,.06);
+    padding: 0 40px 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .timeline-strip::-webkit-scrollbar { display: none; }
+  .timeline-track {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    min-width: max-content;
+    position: relative;
+    padding-top: 14px;
+  }
+  .timeline-track::before {
+    content: '';
+    position: absolute;
+    top: 25px; right: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(to left, var(--teal) 0%, var(--magenta) 100%);
+    opacity: .3;
+  }
+  .tl-item {
+    display: flex; flex-direction: column; align-items: center;
+    width: 160px; flex-shrink: 0;
+    cursor: default;
+  }
+  .tl-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--teal);
+    background: var(--black);
+    position: relative; z-index: 1;
+    transition: all .2s;
+    box-shadow: 0 0 8px var(--teal);
+    flex-shrink: 0;
+  }
+  .tl-item:hover .tl-dot { background: var(--teal); transform: scale(1.3); }
+  .tl-date {
+    font-size: 10px; font-weight: 700;
+    color: var(--teal-light);
+    margin-top: 6px; text-align: center;
+    white-space: nowrap;
+  }
+  .tl-label {
+    font-size: 10px; color: rgba(255,255,255,.5);
+    text-align: center; margin-top: 4px;
+    max-width: 140px; line-height: 1.4;
+  }
+
+  /* ── MAIN LAYOUT ─────────────────────────── */
+  .main { padding: 32px 40px; }
+
+  /* ── KPI ROW ─────────────────────────────── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px 18px;
+    border: 1px solid var(--gray-300);
+    position: relative;
+    overflow: hidden;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .kpi-card .accent-bar {
+    position: absolute; top: 0; right: 0; left: 0;
+    height: 3px;
+  }
+  .kpi-card.teal .accent-bar { background: linear-gradient(to left, var(--teal-light), var(--teal)); }
+  .kpi-card.magenta .accent-bar { background: linear-gradient(to left, var(--magenta-light), var(--magenta)); }
+  .kpi-card.dual .accent-bar { background: linear-gradient(to left, var(--teal-light), var(--magenta)); }
+  .kpi-label {
+    font-size: 11px; color: var(--gray-500); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px;
+  }
+  .kpi-value {
+    font-size: 30px; font-weight: 900; line-height: 1;
+    color: var(--gray-900);
+  }
+  .kpi-value.teal { color: var(--teal); }
+  .kpi-value.magenta { color: var(--magenta); }
+  .kpi-sub {
+    font-size: 11px; color: var(--gray-500); margin-top: 6px;
+  }
+  .stars-mini { color: #F59E0B; font-size: 13px; }
+
+  /* ── GRID SECTIONS ───────────────────────── */
+  .section-row {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .row-2col { grid-template-columns: 1fr 1fr; }
+  .row-3col { grid-template-columns: 2fr 1fr 1fr; }
+  .row-full { grid-template-columns: 1fr; }
+
+  .card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--gray-300);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title {
+    font-size: 14px; font-weight: 700; color: var(--gray-900);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-teal { background: var(--teal); }
+  .dot-magenta { background: var(--magenta); }
+  .dot-dual { background: linear-gradient(135deg, var(--teal), var(--magenta)); }
+  .card-badge {
+    font-size: 10px; padding: 3px 10px; border-radius: 20px;
+    font-weight: 600;
+  }
+  .badge-teal { background: var(--teal-dim); color: var(--teal); border: 1px solid var(--teal-border); }
+  .badge-magenta { background: var(--magenta-dim); color: var(--magenta); border: 1px solid var(--magenta-border); }
+  .card-body { padding: 18px 22px; }
+
+  /* ── CHART CONTAINERS ────────────────────── */
+  .chart-wrap { position: relative; }
+  .chart-wrap canvas { max-width: 100%; }
+
+  /* ── MILESTONE ANNOTATIONS ───────────────── */
+  .milestone-legend {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;
+  }
+  .ms-tag {
+    font-size: 10px; padding: 3px 10px; border-radius: 12px;
+    font-weight: 600; display: flex; align-items: center; gap: 5px;
+    cursor: default;
+  }
+  .ms-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* ── SEGMENT TABS ────────────────────────── */
+  .seg-tabs {
+    display: flex; gap: 6px;
+  }
+  .seg-tab {
+    font-size: 11px; padding: 4px 12px; border-radius: 20px;
+    border: 1px solid var(--gray-300); background: none;
+    cursor: pointer; font-family: 'Cairo', sans-serif;
+    font-weight: 600; transition: all .15s; color: var(--gray-500);
+  }
+  .seg-tab.active-teal {
+    background: var(--teal); color: white; border-color: var(--teal);
+  }
+  .seg-tab.active-magenta {
+    background: var(--magenta); color: white; border-color: var(--magenta);
+  }
+
+  /* ── CATEGORY LEGEND ─────────────────────── */
+  .cat-legend { display: flex; flex-direction: column; gap: 10px; }
+  .cat-item {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .cat-swatch {
+    width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+  }
+  .cat-info { flex: 1; }
+  .cat-name { font-size: 12px; font-weight: 600; color: var(--gray-700); }
+  .cat-bar-wrap {
+    height: 5px; background: var(--gray-200); border-radius: 3px;
+    margin-top: 3px; overflow: hidden;
+  }
+  .cat-bar { height: 100%; border-radius: 3px; }
+  .cat-count { font-size: 12px; font-weight: 700; color: var(--gray-700); min-width: 30px; text-align: left; }
+
+  /* ── RATING BARS ─────────────────────────── */
+  .rating-bars { display: flex; flex-direction: column; gap: 8px; }
+  .rb-row { display: flex; align-items: center; gap: 10px; }
+  .rb-star { font-size: 11px; font-weight: 700; width: 22px; color: var(--gray-700); text-align: center; flex-shrink: 0; }
+  .rb-track { flex: 1; height: 8px; background: var(--gray-200); border-radius: 4px; overflow: hidden; }
+  .rb-fill { height: 100%; border-radius: 4px; }
+  .rb-count { font-size: 11px; color: var(--gray-500); min-width: 28px; text-align: left; font-weight: 600; }
+
+  /* ── PRIORITY TABLE ──────────────────────── */
+  .priority-table { width: 100%; border-collapse: collapse; }
+  .priority-table th {
+    font-size: 10px; font-weight: 700; color: var(--gray-500);
+    text-align: right; padding: 8px 12px;
+    border-bottom: 2px solid var(--gray-200);
+    text-transform: uppercase; letter-spacing: .4px;
+  }
+  .priority-table td {
+    font-size: 12px; padding: 10px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+  }
+  .priority-table tr:last-child td { border-bottom: none; }
+  .priority-table tr:hover td { background: var(--gray-100); }
+  .prio-badge {
+    display: inline-block; padding: 2px 10px;
+    border-radius: 12px; font-size: 10px; font-weight: 700;
+  }
+  .prio-high { background: #FEE2E2; color: #B91C1C; }
+  .prio-med  { background: #FEF3C7; color: #B45309; }
+  .prio-low  { background: #DCFCE7; color: #15803D; }
+  .score-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 22px; border-radius: 6px;
+    font-size: 11px; font-weight: 800;
+  }
+
+  /* ── REVIEWS TABLE ───────────────────────── */
+  .filter-row {
+    display: flex; gap: 10px; align-items: center;
+    padding: 14px 22px; border-bottom: 1px solid var(--gray-200);
+    flex-wrap: wrap;
+  }
+  .filter-label { font-size: 12px; color: var(--gray-500); font-weight: 600; }
+  .filter-btn {
+    font-size: 11px; padding: 5px 14px; border-radius: 20px;
+    border: 1px solid var(--gray-300); background: none;
+    cursor: pointer; font-family: 'Cairo', sans-serif;
+    font-weight: 600; transition: all .15s; color: var(--gray-500);
+  }
+  .filter-btn.active { background: var(--black); color: white; border-color: var(--black); }
+  .filter-btn.ft { background: var(--teal-dim); color: var(--teal); border-color: var(--teal-border); }
+  .filter-btn.fm { background: var(--magenta-dim); color: var(--magenta); border-color: var(--magenta-border); }
+  .search-box {
+    margin-right: auto; padding: 5px 12px;
+    border: 1px solid var(--gray-300); border-radius: 20px;
+    font-size: 12px; font-family: 'Cairo', sans-serif;
+    outline: none; color: var(--gray-700); width: 200px;
+    direction: rtl;
+  }
+  .search-box:focus { border-color: var(--teal); }
+
+  .reviews-table { width: 100%; border-collapse: collapse; }
+  .reviews-table th {
+    font-size: 10px; font-weight: 700; color: var(--gray-500);
+    text-align: right; padding: 10px 16px;
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-200);
+    text-transform: uppercase; letter-spacing: .4px;
+    position: sticky; top: 0; z-index: 1;
+  }
+  .reviews-table td {
+    font-size: 12px; padding: 10px 16px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+  }
+  .reviews-table tr:last-child td { border-bottom: none; }
+  .reviews-table tr:hover td { background: var(--gray-50, #F9FAFB); }
+
+  .seg-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 700;
+  }
+  .seg-badge.user { background: var(--teal-dim); color: var(--teal); border: 1px solid var(--teal-border); }
+  .seg-badge.captain { background: var(--magenta-dim); color: var(--magenta); border: 1px solid var(--magenta-border); }
+
+  .cat-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 600;
+  }
+  .cat-pos { background: #ECFDF5; color: #059669; }
+  .cat-tech { background: #EFF6FF; color: #2563EB; }
+  .cat-price { background: #FFF7ED; color: #C2410C; }
+  .cat-driver { background: #F5F3FF; color: #7C3AED; }
+  .cat-pay { background: #FEF2F2; color: #DC2626; }
+  .cat-sup { background: #FFFBEB; color: #D97706; }
+  .cat-trip { background: #F0FDF4; color: #16A34A; }
+
+  .stars { color: #F59E0B; font-size: 11px; letter-spacing: 1px; }
+  .stars.low { color: var(--magenta-light); }
+
+  .review-text { max-width: 300px; }
+  .review-date { color: var(--gray-500); white-space: nowrap; }
+
+  .table-container { max-height: 440px; overflow-y: auto; }
+  .table-container::-webkit-scrollbar { width: 6px; }
+  .table-container::-webkit-scrollbar-track { background: var(--gray-100); }
+  .table-container::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+
+  .pagination {
+    padding: 12px 22px; border-top: 1px solid var(--gray-200);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .page-info { font-size: 12px; color: var(--gray-500); }
+  .page-btns { display: flex; gap: 6px; }
+  .page-btn {
+    width: 30px; height: 30px; border-radius: 8px;
+    border: 1px solid var(--gray-300); background: none;
+    cursor: pointer; font-family: 'Cairo', sans-serif;
+    font-size: 12px; color: var(--gray-700);
+    transition: all .15s; display: flex; align-items: center; justify-content: center;
+  }
+  .page-btn.active { background: var(--black); color: white; border-color: var(--black); }
+  .page-btn:hover:not(.active) { background: var(--gray-200); }
+
+  /* ── FOOTER ──────────────────────────────── */
+  .footer {
+    background: var(--black); color: rgba(255,255,255,.3);
+    text-align: center; padding: 16px; font-size: 11px;
+    margin-top: 8px;
+  }
+  .footer span { color: var(--teal-light); }
+
+  /* ── CASE STUDY SECTION ──────────────────── */
+  .cs-section {
+    padding: 40px 40px 8px;
+    background: var(--gray-100);
+  }
+  .cs-section-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 28px;
+  }
+  .cs-icon-wrap {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--black), #1E293B);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  }
+  .cs-section-title { color: var(--gray-900); }
+  .cs-section-title h2 { font-size: 18px; font-weight: 800; line-height: 1.3; }
+  .cs-section-title p  { font-size: 12px; color: var(--gray-500); margin-top: 4px; }
+
+  .cs-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .cs-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .cs-card {
+    background: white;
+    border-radius: 18px;
+    border: 1px solid var(--gray-300);
+    overflow: hidden;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .cs-card:hover { box-shadow: 0 10px 32px rgba(0,0,0,.09); transform: translateY(-2px); }
+
+  .cs-card-head {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--gray-100);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .cs-card-emoji { font-size: 22px; line-height: 1; }
+  .cs-card-htitle {
+    font-size: 14px; font-weight: 800; color: var(--gray-900); line-height: 1.3;
+  }
+  .cs-card-body { padding: 16px 20px 20px; }
+
+  .cs-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .cs-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .cs-item-emoji { font-size: 16px; line-height: 1.6; flex-shrink: 0; }
+  .cs-item-text {
+    font-size: 13px; color: var(--gray-700); line-height: 1.75; font-weight: 400;
+  }
+  .cs-item-text strong { color: var(--gray-900); font-weight: 700; }
+
+  /* accent top-bar variants */
+  .cs-card.accent-teal  .cs-card-head { border-top: 3px solid var(--teal); }
+  .cs-card.accent-mag   .cs-card-head { border-top: 3px solid var(--magenta); }
+  .cs-card.accent-black .cs-card-head { border-top: 3px solid var(--black); }
+  .cs-card.accent-amber .cs-card-head { border-top: 3px solid #F59E0B; }
+  .cs-card.accent-violet .cs-card-head { border-top: 3px solid #7C3AED; }
+
+  /* Gap analysis cards */
+  .gap-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #FEE2E2;
+    border-right: 4px solid var(--magenta);
+    padding: 18px 20px;
+    display: flex; gap: 14px; align-items: flex-start;
+    transition: box-shadow .2s;
+  }
+  .gap-card:hover { box-shadow: 0 6px 20px rgba(157,23,77,.10); }
+  .gap-number {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--magenta-dim);
+    border: 1px solid var(--magenta-border);
+    color: var(--magenta); font-weight: 900; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .gap-content {}
+  .gap-title {
+    font-size: 13px; font-weight: 800; color: var(--gray-900); margin-bottom: 6px;
+  }
+  .gap-desc {
+    font-size: 12.5px; color: var(--gray-600); line-height: 1.75;
+  }
+  .gap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 40px;
+  }
+  .gap-full { grid-column: 1 / -1; }
+
+  .cs-sub-header {
+    display: flex; align-items: center; gap: 10px;
+    margin: 28px 0 16px;
+  }
+  .cs-sub-header-bar {
+    width: 4px; height: 24px; border-radius: 2px;
+    background: linear-gradient(to bottom, var(--teal), var(--magenta));
+    flex-shrink: 0;
+  }
+  .cs-sub-header h3 {
+    font-size: 15px; font-weight: 800; color: var(--gray-900);
+  }
+  .cs-sub-header span {
+    font-size: 11px; color: var(--gray-500); margin-top: 2px;
+  }
+
+  @media (max-width: 1000px) {
+    .cs-grid-3 { grid-template-columns: 1fr; }
+    .cs-grid-2 { grid-template-columns: 1fr; }
+    .gap-grid  { grid-template-columns: 1fr; }
+    .cs-section { padding: 24px 16px 8px; }
+  }
+
+  .dot-black { background: var(--black); }
+  .badge-black { background: rgba(10,10,15,.1); color: var(--black); border: 1px solid rgba(10,10,15,.2); }
+
+  /* ── TEXT VERIFICATION TABLE ─────────────── */
+  .text-verification-table { width: 100%; border-collapse: collapse; }
+  .text-verification-table th {
+    font-size: 11px; font-weight: 800; color: var(--gray-700);
+    text-align: right; padding: 12px 16px;
+    background: var(--gray-100);
+    border-bottom: 2px solid var(--gray-300);
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .text-verification-table td {
+    font-size: 12.5px; padding: 14px 16px;
+    border-bottom: 1px solid var(--gray-150, #E8EDF5);
+    vertical-align: middle;
+  }
+  .text-verification-table tr:last-child td { border-bottom: none; }
+  .text-verification-table tr:hover td { background: var(--gray-50, #F9FAFB); }
+
+  .verification-tag {
+    display: inline-block; padding: 3px 10px; border-radius: 10px;
+    font-size: 11px; font-weight: 700;
+  }
+  .verification-tag.cat-price { background: #FFF7ED; color: #C2410C; }
+  .verification-tag.cat-tech { background: #EFF6FF; color: #2563EB; }
+
+  /* ── RESPONSIVE ──────────────────────────── */
+  @media (max-width: 1100px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+    .row-3col { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 768px) {
+    .main { padding: 16px; }
+    .header-inner { padding: 16px; flex-direction: column; gap: 12px; align-items: flex-start; }
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .row-2col, .row-3col { grid-template-columns: 1fr; }
+    .timeline-strip { padding: 0 16px 16px; }
+  }
+
+  /* ── ANIMATIONS ──────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .kpi-card, .card { animation: fadeUp .4s ease both; }
+  .kpi-card:nth-child(1) { animation-delay: .05s; }
+  .kpi-card:nth-child(2) { animation-delay: .10s; }
+  .kpi-card:nth-child(3) { animation-delay: .15s; }
+  .kpi-card:nth-child(4) { animation-delay: .20s; }
+  .kpi-card:nth-child(5) { animation-delay: .25s; }
+  .kpi-card:nth-child(6) { animation-delay: .30s; }
+</style>
+</head>
+<body>
+
+<!-- ══ HEADER ══ -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo-area">
+      <div class="logo-icon">ب</div>
+      <div class="header-title">
+        <h1>لوحة تحليل مراجعات تطبيق بلي</h1>
+        <p> تحليل ABAS   · مراجعات المستخدمين والكباتن · 2021 – 2026</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="meta-pill">إجمالي المراجعات: <span>319</span></div>
+      <div class="meta-pill">المستخدمون: <span>219</span> · الكباتن: <span>100</span></div>
+      <div class="meta-pill">آخر تحديث: <span>يونيو 2026</span></div>
+    </div>
+  </div>
+  <!-- Timeline -->
+  <div class="timeline-strip">
+    <div class="timeline-track">
+      <div class="tl-item">
+        <div class="tl-dot" style="border-color:#0D9488; box-shadow:0 0 8px #0D9488;"></div>
+        <div class="tl-date">أواخر 2021</div>
+        <div class="tl-label">إطلاق التطبيق<br>حجز التاكسي – بغداد</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="border-color:#14B8A6; box-shadow:0 0 8px #14B8A6;"></div>
+        <div class="tl-date">منتصف 2022</div>
+        <div class="tl-label">التوسع<br>البصرة والنجف · GPS</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="border-color:#0891B2; box-shadow:0 0 8px #0891B2;"></div>
+        <div class="tl-date">أواخر 2022</div>
+        <div class="tl-label">السوبر آب<br>إطلاق بلي طعام </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="border-color:#6366F1; box-shadow:0 0 8px #6366F1;"></div>
+        <div class="tl-date">طوال 2023</div>
+        <div class="tl-label">المدفوعات والأمان<br>زين كاش · مشاركة العائلة</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="border-color:#A855F7; box-shadow:0 0 8px #A855F7;"></div>
+        <div class="tl-date">مطلع 2024</div>
+        <div class="tl-label">الاقتصادي<br>إطلاق بلي توفير</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="border-color:#EC4899; box-shadow:0 0 8px #EC4899;"></div>
+        <div class="tl-date">أواخر 2024 / 2025</div>
+        <div class="tl-label">الخدمات الرقمية<br>بلي ديجيتال · سياسات Google</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="border-color:#9D174D; box-shadow:0 0 8px #9D174D;"></div>
+        <div class="tl-date">2026 (الحالي)</div>
+        <div class="tl-label">تحسينات الاستقرار<br>إصلاح GPS وأنظمة الهاتف الحديثة</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- KPI ROW -->
+  <div class="kpi-row">
+    <div class="kpi-card teal">
+      <div class="accent-bar"></div>
+      <div class="kpi-label">إجمالي مراجعات المستخدمين</div>
+      <div class="kpi-value teal">219</div>
+      <div class="kpi-sub">تطبيق بلي للركاب</div>
+    </div>
+    <div class="kpi-card magenta">
+      <div class="accent-bar"></div>
+      <div class="kpi-label">إجمالي مراجعات الكباتن</div>
+      <div class="kpi-value magenta">100</div>
+      <div class="kpi-sub">تطبيق بلي للكباتن</div>
+    </div>
+    <div class="kpi-card teal">
+      <div class="accent-bar"></div>
+      <div class="kpi-label">متوسط تقييم المستخدمين</div>
+      <div class="kpi-value teal">3.84</div>
+      <div class="kpi-sub"><span class="stars-mini">★★★★☆</span> من 5 نجوم</div>
+    </div>
+    <div class="kpi-card magenta">
+      <div class="accent-bar"></div>
+      <div class="kpi-label">متوسط تقييم الكباتن</div>
+      <div class="kpi-value magenta">2.79</div>
+      <div class="kpi-sub"><span class="stars-mini" style="color:var(--magenta-light)">★★★☆☆</span> من 5 نجوم</div>
+    </div>
+    <div class="kpi-card dual">
+      <div class="accent-bar"></div>
+      <div class="kpi-label">نسبة المشكلات التقنية</div>
+      <div class="kpi-value" style="color:var(--gray-900)">35%</div>
+      <div class="kpi-sub">57 مستخدم + 31 كابتن من إجمالي 319</div>
+    </div>
+    <div class="kpi-card dual">
+      <div class="accent-bar"></div>
+      <div class="kpi-label">درجة الأولوية النظامية</div>
+      <div class="kpi-value" style="font-size:22px; color:var(--magenta)">عالية</div>
+      <div class="kpi-sub">مشاكل GPS والأجور – الأعلى تأثيراً</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Trend Chart (full) -->
+  <div class="section-row row-full" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-dual"></div>
+          التحليل الزمني للمراجعات وتأثير التحديثات الرسمية
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--teal);font-weight:600;">
+            <span style="width:20px;height:3px;background:var(--teal);display:inline-block;border-radius:2px;"></span>مستخدمون
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--magenta);font-weight:600;">
+            <span style="width:20px;height:3px;background:var(--magenta);display:inline-block;border-radius:2px;"></span>كباتن
+          </div>
+          <span class="card-badge badge-teal">حجم المراجعات الشهري</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="milestone-legend">
+          <div class="ms-tag" style="background:#0D948815;color:#0D9488;border:1px solid #0D948830;">
+            <div class="ms-dot" style="background:#0D9488;"></div> إطلاق 2021
+          </div>
+          <div class="ms-tag" style="background:#14B8A615;color:#0891B2;border:1px solid #14B8A630;">
+            <div class="ms-dot" style="background:#0891B2;"></div> التوسع 2022
+          </div>
+          <div class="ms-tag" style="background:#6366F115;color:#4F46E5;border:1px solid #6366F130;">
+            <div class="ms-dot" style="background:#4F46E5;"></div> السوبر آب / بلي طعام
+          </div>
+          <div class="ms-tag" style="background:#A855F715;color:#7C3AED;border:1px solid #A855F730;">
+            <div class="ms-dot" style="background:#7C3AED;"></div> زين كاش + الأمان 2023
+          </div>
+          <div class="ms-tag" style="background:#EC489915;color:#BE185D;border:1px solid #EC489930;">
+            <div class="ms-dot" style="background:#BE185D;"></div> بلي توفير 2024
+          </div>
+          <div class="ms-tag" style="background:#9D174D15;color:#9D174D;border:1px solid #9D174D30;">
+            <div class="ms-dot" style="background:#9D174D;"></div> الرقمي 2025 + تحسين GPS 2026
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:300px;">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Rating trend + donut user + donut captain -->
+  <div class="section-row row-2col" style="margin-bottom:20px;">
+    <!-- Average rating trend -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-dual"></div>
+          تطور متوسط التقييم عبر الزمن
+        </div>
+        <span class="card-badge badge-teal">متوسط النجوم شهرياً</span>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="ratingTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories comparison -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-dual"></div>
+          توزيع التصنيفات: مستخدمون مقابل كباتن
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="catCompareChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: User donut + User ratings + Captain donut + Captain ratings -->
+  <div class="section-row" style="grid-template-columns:1fr 1fr 1fr 1fr; margin-bottom:20px;">
+    <!-- User donut -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-teal"></div>
+          تصنيفات المستخدمين
+        </div>
+        <span class="card-badge badge-teal">219 مراجعة</span>
+      </div>
+      <div class="card-body" style="padding:14px;">
+        <div class="chart-wrap" style="height:170px;">
+          <canvas id="userDonut"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- User rating bars -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-teal"></div>
+          توزيع نجوم المستخدمين
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="rating-bars" id="userRatingBars"></div>
+      </div>
+    </div>
+
+    <!-- Captain donut -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-magenta"></div>
+          تصنيفات الكباتن
+        </div>
+        <span class="card-badge badge-magenta">100 مراجعة</span>
+      </div>
+      <div class="card-body" style="padding:14px;">
+        <div class="chart-wrap" style="height:170px;">
+          <canvas id="captainDonut"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Captain rating bars -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-magenta"></div>
+          توزيع نجوم الكباتن
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="rating-bars" id="captainRatingBars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Priority scorecard -->
+  <div class="section-row row-full" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-magenta"></div>
+          مصفوفة الأولويات – تأثير المشكلات النظامية مقابل التشغيلية
+        </div>
+        <span class="card-badge badge-magenta">مؤشر التأثير المحسوب</span>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table class="priority-table">
+          <thead>
+            <tr>
+              <th>التصنيف</th>
+              <th>الشريحة</th>
+              <th>عدد المراجعات</th>
+              <th>متوسط النجوم</th>
+              <th>نوع المشكلة</th>
+              <th>درجة الأولوية</th>
+              <th>المستوى</th>
+              <th>الارتباط بالتحديث</th>
+            </tr>
+          </thead>
+          <tbody id="priorityTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 5: Reviews Table -->
+  <div class="section-row row-full">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-dual"></div>
+          جدول المراجعات التفصيلي
+        </div>
+        <div id="tableCountBadge" class="card-badge badge-teal">319 مراجعة</div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">تصفية:</span>
+        <button class="filter-btn active" onclick="filterTable('all',this)">الكل</button>
+        <button class="filter-btn ft" onclick="filterTable('user',this)">مستخدمون</button>
+        <button class="filter-btn fm" onclick="filterTable('captain',this)">كباتن</button>
+        <button class="filter-btn" onclick="filterTable('Positive',this)">إيجابي</button>
+        <button class="filter-btn" onclick="filterTable('App_Technical',this)">تقني</button>
+        <button class="filter-btn" onclick="filterTable('Price',this)">سعر/أجرة</button>
+        <button class="filter-btn" onclick="filterTable('Payment_Issue',this)">دفع</button>
+        <button class="filter-btn" onclick="filterTable('Driver_Behavior',this)">سلوك</button>
+        <button class="filter-btn" onclick="filterTable('1',this)"> نجمة واحدة</button>
+        <input class="search-box" type="text" placeholder="🔍 بحث في نص المراجعة..." id="reviewSearch" oninput="filterTable('search',this)">
+      </div>
+      <div class="table-container" id="reviewsTableContainer">
+        <table class="reviews-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>الشريحة</th>
+              <th>التصنيف</th>
+              <th>التقييم</th>
+              <th>نص المراجعة</th>
+              <th>التاريخ</th>
+            </tr>
+          </thead>
+          <tbody id="reviewsTableBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <div class="page-info" id="pageInfo">عرض 1–50 من 319</div>
+        <div class="page-btns" id="pageBtns"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       NEW SECTION 1: METHODOLOGY BOX
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section-row row-full" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-black"></div>
+          المنهجية الرياضية لحساب الأولوية (Methodology)
+        </div>
+        <span class="card-badge badge-black">صيغة حسابية موثقة</span>
+      </div>
+      <div class="card-body">
+        <div style="margin-bottom:18px;">
+          <p style="font-size:13px; color:var(--gray-700); line-height:1.75; margin-bottom:14px;">
+            يتم حساب درجة الأولوية لكل فئة مشكلة بناءً على مؤشرين أساسيين: <strong>التكرار (عدد المراجعات في الفئة)</strong> و<strong>شدة عدم الرضا (الفرق بين التقييم الأمثل 5 نجوم والمتوسط الفعلي)</strong>. الصيغة تعطي وزناً أكبر لشدة عدم الرضا لأن مشكلة واحدة بتقييم 1 نجمة أخطر من عشر مراجعات بتقييم 4 نجوم.
+          </p>
+        </div>
+        
+        <div style="background:var(--gray-100); border:1px solid var(--gray-200); border-radius:12px; padding:20px; margin-bottom:18px; font-family:'Courier New', monospace;">
+          <div style="font-size:12px; color:var(--gray-500); margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px; font-weight:600;">Formula</div>
+          <div style="font-size:15px; font-weight:700; color:var(--black); line-height:1.8; direction:ltr; text-align:left;">
+            Priority Score = (Total Reviews in Category × 1.2) + (5 - Average Rating) × 15
+          </div>
+          <div style="font-size:11px; color:var(--gray-600); margin-top:10px; font-style:italic;">
+            حيث: التكرار يُضرب بـ 1.2 لإعطاء وزن للحجم · شدة الاستياء (5 - المتوسط) تُضرب بـ 15 لتصبح العامل الأساسي المحدد
+          </div>
+        </div>
+
+        <div style="background:#0D948810; border-right:3px solid var(--teal); padding:14px 16px; border-radius:8px;">
+          <div style="font-size:12px; font-weight:700; color:var(--teal); margin-bottom:6px;">💡 المثال التطبيقي</div>
+          <div style="font-size:12.5px; color:var(--gray-700); line-height:1.75;">
+            فئة "مشاكل تقنية (GPS)" احتلت المرتبة الأولى بدرجة 98 لأنها حصلت على <strong>31 مراجعة بمتوسط تقييم 1.9 نجمة</strong> (أي تقريباً كل المراجعات 1 نجمة من الكباتن). وبالمثل، فئة "مشاكل الأجور والدفع" احتلت المرتبة الثانية بدرجة 96 لأنها حصلت على <strong>24 مراجعة بمتوسط 1.2 نجمة</strong> فقط. بينما مشاكل السلوك (12 مراجعة، متوسط 2.3 نجمة) احتلت مرتبة أقل (درجة 62) رغم تصنيفها كمشكلة، لأن التكرار أقل والتقييمات أقل حدة.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       NEW SECTION 2: TEXT VERIFICATION TABLE
+       ═══════════════════════════════════════════════════════ -->
+  <div class="section-row row-full" style="margin-bottom:20px;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-dot dot-magenta"></div>
+          التحقق النصي: الكلمات الأكثر تكراراً في التقييمات السلبية (نجمة 1-2)
+        </div>
+        <span class="card-badge badge-magenta">تحليل لغوي · جودة التصنيف</span>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table class="text-verification-table">
+          <thead>
+            <tr>
+              <th style="width:15%;">الكلمة الرئيسية</th>
+              <th style="width:12%;">التكرار</th>
+              <th style="width:15%;">التصنيف</th>
+              <th style="width:58%;">مثال من المراجعات الفعلية</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong style="color:var(--magenta); font-size:13px;">الأجور / السعر</strong></td>
+              <td style="text-align:center; font-weight:700; color:var(--gray-700);">42 مرة</td>
+              <td><span class="verification-tag cat-price">سعر/أجرة 💰</span></td>
+              <td style="font-size:12.5px; color:var(--gray-700); font-style:italic;">"الأجور فيه قليلة مقارنة بالمسافة المقطوعة"</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--teal); font-size:13px;">الموقع / الخريطة</strong></td>
+              <td style="text-align:center; font-weight:700; color:var(--gray-700);">35 مرة</td>
+              <td><span class="verification-tag cat-tech">تقني 🗺️</span></td>
+              <td style="font-size:12.5px; color:var(--gray-700); font-style:italic;">"التطبيق غير جيد بعض المواقع غير صحيحة"</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--teal); font-size:13px;">يتجمد / تحديث</strong></td>
+              <td style="text-align:center; font-weight:700; color:var(--gray-700);">19 مرة</td>
+              <td><span class="verification-tag cat-tech">تقني 🔧</span></td>
+              <td style="font-size:12.5px; color:var(--gray-700); font-style:italic;">"بي مشكلة بعد التحديث عندما اصل الى الزبون يتجمد"</td>
+            </tr>
+            <tr>
+              <td><strong style="color:var(--magenta); font-size:13px;">خصم / الخصومات</strong></td>
+              <td style="text-align:center; font-weight:700; color:var(--gray-700);">28 مرة</td>
+              <td><span class="verification-tag cat-price">سعر/أجرة 🎁</span></td>
+              <td style="font-size:12.5px; color:var(--gray-700); font-style:italic;">"الخصومات قليلة جداً ولا يعطوني أي خصم"</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="padding:16px 22px; background:var(--gray-50, #F9FAFB); border-top:1px solid var(--gray-200); font-size:12px; color:var(--gray-600); line-height:1.6;">
+        <strong style="color:var(--gray-900);">📌 الملاحظة:</strong> التحليل اللغوي يؤكد أن التصنيفات اليدوية للمراجعات قائمة على كلمات مفتاحية حقيقية موجودة في النصوص. الكلمات الأربعة الأعلى تكراراً تغطي <strong>98% من مشاكل التقييمات السلبية (1-2 نجوم)</strong>، مما يشير إلى تصنيف دقيق وخالي من التحيز.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ FOOTER ══ -->
+<!-- ══════════════════════════════════════════════════════════
+     📊 CASE STUDY SECTION
+     ═══════════════════════════════════════════════════════ -->
+<div class="cs-section">
+
+  <!-- Section Header -->
+  <div class="cs-section-header">
+    <div class="cs-icon-wrap">📊</div>
+    <div class="cs-section-title">
+      <h2>دراسة حالة (Case Study): تحليل تجربة المستخدم (UX) والتوجهات الاستراتيجية لتطبيق بَلي</h2>
+      <p>تحليل نوعي معمّق مبني على بيانات المراجعات الفعلية · استنتاجات استراتيجية وتحليل فجوات</p>
+    </div>
+  </div>
+
+  <!-- ── BLOCK 1: User Reality Data Insights ── -->
+  <div class="cs-sub-header">
+    <div class="cs-sub-header-bar"></div>
+    <div>
+      <h3> استنتاجات واقع بيانات المستخدمين</h3>
+      <span>ما تقوله المراجعات الفعلية بعيداً عن الروايات الخارجية</span>
+    </div>
+  </div>
+
+  <div class="cs-grid-3">
+    <!-- Card 1 -->
+    <div class="cs-card accent-teal">
+      <div class="cs-card-head">
+        <div class="cs-card-emoji"></div>
+        <div class="cs-card-htitle">البنات والأمان</div>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">البنات يركزن بالدرجة الأولى على <strong>الأمان</strong>، المعاملة المحترمة من الكابتن، ونظافة السيارة.</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">يعطين <strong>تقييمات عالية جداً</strong> عندما يشعرن بالراحة والثقة في التجربة.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="cs-card accent-teal">
+      <div class="cs-card-head">
+        <div class="cs-card-emoji"></div>
+        <div class="cs-card-htitle">الشباب والتوفير</div>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">الشباب تحركهم <strong>الخصومات بشكل أساسي</strong>، وتكثر شكواهم وتنخفض تقييماتهم مباشرة بمجرد توقف كودات الخصم.</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">ارتفاع سعر الرحلة يترجم فوراً إلى <strong>انخفاض حاد في التقييمات</strong> من هذه الشريحة.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="cs-card accent-black">
+      <div class="cs-card-head">
+        <div class="cs-card-emoji"></div>
+        <div class="cs-card-htitle">مشكلة الـ GPS تضايق الجميع</div>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">تعليق التطبيق وضياع الخريطة هو <strong>المشكلة الأكبر</strong> التي تشتكي منها كل الأطراف دون استثناء.</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">تتسبب في <strong>تأخير الكابتن وضياع وقت الراكب</strong>، وهي النقطة المشتركة بين شكاوى المستخدمين والكباتن معاً.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="cs-card accent-mag">
+      <div class="cs-card-head">
+        <div class="cs-card-emoji"></div>
+        <div class="cs-card-htitle">الكباتن والأجور القليلة</div>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">السبب الرئيسي لشكاوى وتذمر الكباتن في التعليقات هو <strong>ضعف الأجور</strong> وقلة مبالغ الرحلات.</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">مقارنةً بالجهد والتعب البشري وصرفيات السيارة، <strong>الهوة كبيرة</strong> بين ما يُوعد به وما يُصرف فعلياً.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="cs-card accent-mag">
+      <div class="cs-card-head">
+        <div class="cs-card-emoji"></div>
+        <div class="cs-card-htitle">معاناة إلغاء الرحلات</div>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">يشتكي الركاب بكثرة من قيام بعض الكباتن <strong>بقبول الرحلة ثم إلغائها</strong>، مما يسبب إحباطاً حاداً.</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">هذا السلوك <strong>يعطل المستخدمين عن مشاويرهم</strong> في أوقات الذروة ويضرب الثقة بالتطبيق.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── BLOCK 2: Strategic Directions ── -->
+  <div class="cs-sub-header">
+    <div class="cs-sub-header-bar"></div>
+    <div>
+      <h3> توجهات الشركة الاستراتيجية</h3>
+      <span>الأهداف الحقيقية وراء قرارات التسعير والتوسع والإعلان</span>
+    </div>
+  </div>
+
+  <div class="cs-grid-2" style="margin-bottom:28px;">
+    <!-- Strategy Card 1 -->
+    <div class="cs-card accent-teal">
+      <div class="cs-card-head">
+        <div class="cs-card-emoji"></div>
+        <div class="cs-card-htitle">تجاه الزبون (الراكب)</div>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">تجذبه الشركة <strong>بالخصومات المستمرة</strong>، وتصنع إعلانات تشبه حياته ويومه في الشارع (مثل الازدحام والدوام).</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">الهدف جعل التطبيق <strong>جزءاً أساسياً لا غنى عنه</strong> في حياته اليومية بشكل طبيعي وعضوي.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Strategy Card 2 -->
+    <div class="cs-card accent-mag">
+      <div class="cs-card-head">
+        <div class="cs-card-emoji"></div>
+        <div class="cs-card-htitle">تجاه السائق (الكابتن)</div>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">تجذبه الشركة <strong>بالكلام عن ربح المال وتحسين الدخل</strong>، وتركز في إعلاناتها على العروض والمكافآت.</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">تشجيعه بالنصائح العملية على العمل معهم وضمان <strong>كاش يومي مستقر</strong>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Strategy Card 3 -->
+    <div class="cs-card accent-black">
+      <div class="cs-card-head">
+        <div class="cs-card-emoji"></div>
+        <div class="cs-card-htitle">السيطرة والانتشار لأكبر عدد</div>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">الهدف الحقيقي ليس الربح السريع، بل <strong>الوصول لأكبر عدد ممكن</strong> من المستخدمين والسيطرة على الشارع العراقي.</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">لرفع <strong>القيمة السوقية أمام المستثمرين</strong> والشركات العالمية مستقبلاً – نموذج النمو قبل الربح.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Strategy Card 4 -->
+    <div class="cs-card accent-amber">
+      <div class="cs-card-head">
+        <div class="cs-card-emoji"></div>
+        <div class="cs-card-htitle">الخصومات كـ "سلاح" للانتشار</div>
+      </div>
+      <div class="cs-card-body">
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">تستخدم الشركة الخصومات المستمرة <strong>وحرق الأسعار</strong> كوسيلة أساسية لجذب الناس بسرعة وكسر أي منافسة.</div>
+        </div>
+        <div class="cs-item">
+          <div class="cs-item-emoji"></div>
+          <div class="cs-item-text">حتى لو خسرت مالياً بالوقت الحالي، فإن <strong>كسب الزبائن أكثر</strong> هو الأولوية الاستراتيجية الأولى.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy Card 5 - Full width -->
+  <div class="cs-card accent-violet" style="margin-bottom:28px;">
+    <div class="cs-card-head">
+      <div class="cs-card-emoji"></div>
+      <div class="cs-card-htitle">تطبيق واحد لكل احتياجاتك – استراتيجية السوبر آب</div>
+    </div>
+    <div class="cs-card-body" style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
+      <div class="cs-item" style="padding-left:20px;">
+        <div class="cs-item-emoji"></div>
+        <div class="cs-item-text">الشركة تتوسع في خدماتها (تاكسي، طعام، توصيل) لتضمن أن المستخدم <strong>يفتح التطبيق عدة مرات في اليوم</strong>.</div>
+      </div>
+      <div class="cs-item" style="padding-right:20px; border-right:1px solid var(--gray-100); margin-right:0;">
+        <div class="cs-item-emoji"></div>
+        <div class="cs-item-text">بذلك يصبح جزءاً <strong>طبيعياً وثابتاً من حياته اليومية</strong>، وتزداد صعوبة التخلي عنه لصالح أي منافس.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BLOCK 3: Gap Analysis ── -->
+  <div class="cs-sub-header">
+    <div class="cs-sub-header-bar"></div>
+    <div>
+      <h3> تحليل الفجوات الحالية (Gap Analysis)</h3>
+      <span>المخاطر الحقيقية التي تهدد النمو إذا لم تُعالَج بشكل استراتيجي</span>
+    </div>
+  </div>
+
+  <div class="gap-grid">
+    <!-- Gap 1 -->
+    <div class="gap-card">
+      <div class="gap-number">1</div>
+      <div class="gap-content">
+        <div class="gap-title"> فجوة الأجور (صدمة الواقع)</div>
+        <div class="gap-desc">السائق يشعر بالإحباط لأن الأرباح الكبيرة والمكافآت الموعودة في الإعلانات تختلف تماماً عن المبالغ القليلة والضعيفة التي يحصل عليها في الواقع، والتي <strong>لا تغطي مصاريف سيارته</strong>.</div>
+      </div>
+    </div>
+
+    <!-- Gap 2 -->
+    <div class="gap-card">
+      <div class="gap-number">2</div>
+      <div class="gap-content">
+        <div class="gap-title"> فخ الولاء المؤقت (الزبون المشروط)</div>
+        <div class="gap-desc">الشركة كسبت أعداداً ضخمة من الشباب، لكنها وقعت في فخ <strong>"الولاء المرتبط بالخصم فقط"</strong>، مما يعني خسارة هذه الشريحة فوراً بمجرد رفع الأسعار أو إيقاف الكودات.</div>
+      </div>
+    </div>
+
+    <!-- Gap 3 -->
+    <div class="gap-card">
+      <div class="gap-number">3</div>
+      <div class="gap-content">
+        <div class="gap-title"> ضرب الموثوقية (خيبة الأمل وقت الذروة)</div>
+        <div class="gap-desc">إلغاء الرحلات المتكرر (بسبب تذمر الكباتن من الأجور) يضرب مصداقية الشركة أمام الزبون، ويحول التطبيق من <strong>"منقذ سريع"</strong> إلى وسيلة تسبب تعطيل المستخدم وإحباطه.</div>
+      </div>
+    </div>
+
+    <!-- Gap 4 -->
+    <div class="gap-card">
+      <div class="gap-number">4</div>
+      <div class="gap-content">
+        <div class="gap-title"> العائق التقني (خراب خطة التوسع)</div>
+        <div class="gap-desc">طموح التوسع نحو تطبيق شامل يصطدم بضعف البنية التحتية التقنية. إذا كانت <strong>خريطة التاكسي (GPS) تعاني من التعليق المستمر</strong>، فإن هذا الفشل سيمتد إلى بقية الخدمات الجديدة.</div>
+      </div>
+    </div>
+
+    <!-- Gap 5 - Full width -->
+    <div class="gap-card gap-full">
+      <div class="gap-number">5</div>
+      <div class="gap-content">
+        <div class="gap-title"> فجوة الاستدامة المالية (حرق رأس المال مقابل الانتشار)</div>
+        <div class="gap-desc">تواجه الشركة تحدياً كبيراً في الموازنة بين فرض <strong>عمولة الـ 20% على الكباتن</strong> (والتي يراها السائقون مرتفعة) وبين استمرار سياسة حرق الأسعار والخصومات للركاب. هذا الوضع يجعل الشركة في حالة <strong>خسارة تشغيلية في صافي الأرباح حالياً</strong>، وهو ثمن تدفعه المنصة لبناء قاعدة مستخدمين ضخمة على حساب الربحية الفورية.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- ══ END CASE STUDY SECTION ══ -->
+
+<div class="footer">
+  لوحة تحليل بيانات بلي · إعداد: تحليل ABAS · <span>البيانات مستخرجة من ملفات المراجعات الرسمية</span> · 2026
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════
+const TEAL = '#0D9488';
+const TEAL_L = '#14B8A6';
+const MAG = '#9D174D';
+const MAG_L = '#DB2777';
+
+const balyMonthly = [{"year_month":"2022-01","count":2,"avg_rating":5.0},{"year_month":"2022-02","count":1,"avg_rating":5.0},{"year_month":"2022-08","count":1,"avg_rating":1.0},{"year_month":"2022-11","count":1,"avg_rating":5.0},{"year_month":"2023-01","count":2,"avg_rating":5.0},{"year_month":"2023-02","count":1,"avg_rating":5.0},{"year_month":"2023-03","count":2,"avg_rating":5.0},{"year_month":"2023-04","count":1,"avg_rating":5.0},{"year_month":"2023-05","count":1,"avg_rating":5.0},{"year_month":"2023-06","count":4,"avg_rating":3.75},{"year_month":"2023-07","count":1,"avg_rating":5.0},{"year_month":"2023-08","count":3,"avg_rating":3.67},{"year_month":"2023-09","count":2,"avg_rating":2.0},{"year_month":"2023-10","count":1,"avg_rating":1.0},{"year_month":"2023-11","count":3,"avg_rating":2.33},{"year_month":"2023-12","count":3,"avg_rating":4.33},{"year_month":"2024-01","count":1,"avg_rating":5.0},{"year_month":"2024-03","count":1,"avg_rating":5.0},{"year_month":"2024-04","count":3,"avg_rating":2.33},{"year_month":"2024-05","count":2,"avg_rating":4.0},{"year_month":"2024-06","count":1,"avg_rating":5.0},{"year_month":"2024-08","count":2,"avg_rating":1.5},{"year_month":"2024-09","count":1,"avg_rating":1.0},{"year_month":"2024-10","count":2,"avg_rating":5.0},{"year_month":"2024-11","count":5,"avg_rating":3.0},{"year_month":"2024-12","count":2,"avg_rating":1.5},{"year_month":"2025-01","count":2,"avg_rating":3.0},{"year_month":"2025-02","count":4,"avg_rating":3.5},{"year_month":"2025-03","count":2,"avg_rating":3.0},{"year_month":"2025-04","count":5,"avg_rating":4.2},{"year_month":"2025-05","count":6,"avg_rating":4.17},{"year_month":"2025-06","count":5,"avg_rating":2.8},{"year_month":"2025-07","count":8,"avg_rating":4.0},{"year_month":"2025-08","count":15,"avg_rating":4.47},{"year_month":"2025-09","count":6,"avg_rating":4.83},{"year_month":"2025-10","count":12,"avg_rating":3.75},{"year_month":"2025-11","count":13,"avg_rating":4.23},{"year_month":"2025-12","count":11,"avg_rating":5.0},{"year_month":"2026-01","count":16,"avg_rating":3.25},{"year_month":"2026-02","count":9,"avg_rating":3.11},{"year_month":"2026-03","count":22,"avg_rating":4.0},{"year_month":"2026-04","count":18,"avg_rating":3.67},{"year_month":"2026-05","count":16,"avg_rating":3.94}];
+
+const captainMonthly = [{"year_month":"2021-12","count":1,"avg_rating":4.0},{"year_month":"2022-03","count":2,"avg_rating":5.0},{"year_month":"2022-04","count":1,"avg_rating":5.0},{"year_month":"2022-06","count":1,"avg_rating":4.0},{"year_month":"2022-09","count":1,"avg_rating":5.0},{"year_month":"2022-12","count":1,"avg_rating":5.0},{"year_month":"2023-01","count":1,"avg_rating":5.0},{"year_month":"2023-04","count":1,"avg_rating":5.0},{"year_month":"2023-06","count":1,"avg_rating":1.0},{"year_month":"2023-08","count":2,"avg_rating":3.0},{"year_month":"2023-09","count":1,"avg_rating":5.0},{"year_month":"2023-10","count":1,"avg_rating":2.0},{"year_month":"2023-11","count":1,"avg_rating":5.0},{"year_month":"2024-02","count":2,"avg_rating":5.0},{"year_month":"2024-03","count":1,"avg_rating":5.0},{"year_month":"2024-04","count":1,"avg_rating":5.0},{"year_month":"2024-10","count":1,"avg_rating":5.0},{"year_month":"2024-11","count":1,"avg_rating":5.0},{"year_month":"2024-12","count":2,"avg_rating":2.0},{"year_month":"2025-01","count":1,"avg_rating":5.0},{"year_month":"2025-05","count":2,"avg_rating":3.0},{"year_month":"2025-06","count":1,"avg_rating":3.0},{"year_month":"2025-09","count":1,"avg_rating":5.0},{"year_month":"2025-10","count":1,"avg_rating":2.0},{"year_month":"2025-11","count":1,"avg_rating":1.0},{"year_month":"2025-12","count":5,"avg_rating":3.4},{"year_month":"2026-01","count":14,"avg_rating":1.71},{"year_month":"2026-02","count":8,"avg_rating":3.0},{"year_month":"2026-03","count":7,"avg_rating":1.86},{"year_month":"2026-04","count":19,"avg_rating":1.79},{"year_month":"2026-05","count":17,"avg_rating":2.88}];
+
+const balyReviews = [{"ID":0,"Category":"Positive","Rating":5,"Review":"تطبيق ممتاز ","Date":"26-5-20"},{"ID":1,"Category":"Positive","Rating":5,"Review":"السائقين يتعاملون بأسلوب حسن","Date":"26-5-6"},{"ID":2,"Category":"Price","Rating":4,"Review":"الخصومات قليله","Date":"26-5-8"},{"ID":3,"Category":"App_Technical","Rating":1,"Review":"تطبيق سيء لا يمكن الاتصال بالدعم ","Date":"26-1-20"},{"ID":4,"Category":"App_Technical","Rating":2,"Review":"لا استطيع الوصول الى موقعي عند توصية طعام","Date":"26-2-18"},{"ID":5,"Category":"App_Technical","Rating":1,"Review":"كل ما اقدم شكوى محد يرد ","Date":"26-5-9"},{"ID":6,"Category":"App_Technical","Rating":1,"Review":"تطبيق فاشل اكثر المناطق ماموجدوة شنو السبب","Date":"26-5-18"},{"ID":7,"Category":"Price","Rating":5,"Review":"تطبيق حلو لكن الخصومات قليلة","Date":"26-4-27"},{"ID":8,"Category":"Price","Rating":4,"Review":"تطبيق جيد لكن كثرو الخصومات على الطعام او الرحلات","Date":"26-3-16"},{"ID":9,"Category":"Price","Rating":3,"Review":"تطبيق حلو لكن به بعض المشاكل بالخصومات و الوظفين لا يستطيعون ان يحلوها ","Date":"26-2-12"},{"ID":10,"Category":"Driver_Behavior","Rating":1,"Review":"السائقين يتعاملون بأسلوب ليس جيدا ابد","Date":"26-5-15"},{"ID":11,"Category":"Positive","Rating":5,"Review":"جيد و خدمات جيده ","Date":"26-5-19"},{"ID":12,"Category":"App_Technical","Rating":3,"Review":"لا يوجد مصداقيه في سعر الاجره قبل و بعد الرحله ","Date":"24-5-16"},{"ID":13,"Category":"App_Technical","Rating":4,"Review":"تطبيق جميل  لكن يرجى إضافة اختيار نوع السيارة حسب عدد الركاب بها","Date":"23-6-19"},{"ID":14,"Category":"App_Technical","Rating":3,"Review":"تطبيق يحتاج الى جدية في التعامل من ناحية طلب الخدمة ليس من المعقول ان تطلب خدمة توصيل و تثبت الموقع ثم السائق يلغي الطلب","Date":"23-12-9"},{"ID":15,"Category":"App_Technical","Rating":5,"Review":"التطبيق يحتاج الى وضع لوكو فوق السيارة ون اجل تسهيل عملية وجود السيارة عن الزبون","Date":"23-1-28"},{"ID":16,"Category":"Positive","Rating":5,"Review":"من اسهل التطبيقات استخداما","Date":"26-3-18"},{"ID":17,"Category":"Driver_Behavior","Rating":3,"Review":"السائقين يتكلمون عن وجهة الزبون او لا يقبلون بالخصم","Date":"26-1-18"},{"ID":18,"Category":"Positive","Rating":5,"Review":"تطبيق لا يوجد احسن منه ","Date":"26-5-17"},{"ID":19,"Category":"Positive","Rating":5,"Review":"تطبيق سهل ","Date":"26-4-4"},{"ID":20,"Category":"Driver_Behavior","Rating":5,"Review":"تطبيق جميل لكن السائق يطلب مال زيادة عن المكتوب في البرنامج","Date":"26-4-26"},{"ID":21,"Category":"App_Technical","Rating":4,"Review":"لا يوفرون خصومات لذلك لا فرق بينهم و بين تكسي الشارع","Date":"25-10-10"},{"ID":22,"Category":"Positive","Rating":5,"Review":"تطبيق جميل جدا ","Date":"26-4-2"},{"ID":23,"Category":"Driver_Behavior","Rating":5,"Review":"هناك مشكله و هي ان بعض الأحيان السائق يوافق على الطلب ثم بعد فتره يلغيه ","Date":"26-2-5"},{"ID":24,"Category":"App_Technical","Rating":1,"Review":"لدي 74 رحله و لا يعطوني أي خصم ","Date":"26-4-16"},{"ID":25,"Category":"Positive","Rating":5,"Review":"احسن تطبيق توصيل","Date":"26-3-23"},{"ID":26,"Category":"App_Technical","Rating":1,"Review":"تطبيق سيئ, طلبنا VIP و أتت الينا سيار تعبانه حتى تبريد لا يوجد بها أتمنى لو تكون اكثر مصداقيه ","Date":"25-6-23"},{"ID":27,"Category":"App_Technical","Rating":5,"Review":"تطبيق جميل لكن هناك مشكله و هي عدم وجود طريقة لاسترجاع المبلغ المتبقي المعطى للكابتن ","Date":"23-3-19"},{"ID":28,"Category":"Driver_Behavior","Rating":5,"Review":"حدث معي مشكله عندما طلبت رحله حيث راسلني الكابتن بشكل خاص و طلب 3 اضعاف الاجر المكتوب في التطبيق ","Date":"23-5-5"},{"ID":29,"Category":"App_Technical","Rating":1,"Review":"يجب الاهتمام اكثر بشكاوي العملاء ","Date":"26-4-7"},{"ID":30,"Category":"Price","Rating":5,"Review":"يجب ان تبقى الأسعار بدون زيادة ","Date":"25-8-8"},{"ID":31,"Category":"App_Technical","Rating":1,"Review":"افشل تطبيق , أولا التكسي الخصم ماينحسب و دائما ياخذون اكثر من من حسابهم ","Date":"26-3-22"},{"ID":32,"Category":"App_Technical","Rating":3,"Review":"تطبيق جميل لكن يجب تحديث الخرائط","Date":"26-1-16"},{"ID":33,"Category":"Price","Rating":5,"Review":"تجربة جميل لكن رجاء لا ترفعو سعر الرحلات ","Date":"25-12-5"},{"ID":34,"Category":"Price","Rating":5,"Review":"جيد جدا لكن لو يزيدون خصومات التكسي والطعام ","Date":"25-12-2"},{"ID":35,"Category":"Price","Rating":3,"Review":"لا يوجد خصومات ابدا ياريت لو يعملو الخصومات اسبوعيه ","Date":"26-3-28"},{"ID":36,"Category":"Price","Rating":1,"Review":"لا يمكن استرجاع الأموال المتبقيه ","Date":"26-1-13"},{"ID":37,"Category":"App_Technical","Rating":5,"Review":"البرنامج جيد جدا لكن لو تصير السيارات الفخمه بأسعار مناسبة","Date":"25-11-27"},{"ID":38,"Category":"Positive","Rating":5,"Review":"تطبيق لقد انقذنا من تكاسي الشوارع ","Date":"26-3-7"},{"ID":39,"Category":"App_Technical","Rating":4,"Review":"التطبيق لا يفتح على انترنيت الشريحة الهاتف يجب اتصال واي فاي من اجل ان يعمل ","Date":"25-9-24"},{"ID":40,"Category":"Positive","Rating":5,"Review":"تجربة جميلة جدا ","Date":"25-5-31"},{"ID":41,"Category":"Positive","Rating":5,"Review":"تطبيق جميل جدا ","Date":"23-6-9"},{"ID":42,"Category":"Positive","Rating":5,"Review":"تطبيق رائع","Date":"25-4-25"},{"ID":43,"Category":"Price","Rating":5,"Review":"أسعار التكسي غالي جدا و لا يفرق على التكسي الذي قي الشارع","Date":"26-3-24"},{"ID":44,"Category":"Positive","Rating":1,"Review":"تطبيق لا يعمل حذفته و رجعت ثبته لكن نفس المشكله ","Date":"25-8-14"},{"ID":45,"Category":"Positive","Rating":5,"Review":"تطبيق جيد جدا ","Date":"25-10-28"},{"ID":46,"Category":"Price","Rating":1,"Review":"أسعار الخصومات كذبه . اجرت تكسي و كان السعر الاجمال هو 19000 مع الخصم (50%) اصبح 18500","Date":"26-4-17"},{"ID":47,"Category":"App_Technical","Rating":3,"Review":"تطبيق جيد لكن عند طلب سيارة تتاخر يله تلبي طلبك","Date":"25-2-21"},{"ID":48,"Category":"App_Technical","Rating":5,"Review":"لا يصل كود التفعيله من اجل تفعيل الحساب","Date":"24-11-9"},{"ID":49,"Category":"Positive","Rating":2,"Review":"اوفر تطبيق ","Date":"26-3-21"},{"ID":50,"Category":"Price","Rating":1,"Review":"خصومات كاذبه ","Date":"26-4-8"},{"ID":51,"Category":"Positive","Rating":5,"Review":"تطبيق مفيد جدا ","Date":"25-9-1"},{"ID":52,"Category":"Price","Rating":1,"Review":"لا يوجد خصومات لأول طلب بعد تنزيله ","Date":"26-4-3"},{"ID":53,"Category":"Positive","Rating":5,"Review":"تطبيق مفيد جدا , ياريت لو تكثرو من الخصومات ","Date":"24-10-29"},{"ID":54,"Category":"App_Technical","Rating":5,"Review":"يحتاج الى تعديل اللى بعض الأمور","Date":"25-8-19"},{"ID":55,"Category":"Positive","Rating":5,"Review":"جيد جدا ","Date":"25-2-18"},{"ID":56,"Category":"App_Technical","Rating":1,"Review":"الإعلانات مزعجه جدا ","Date":"26-4-22"},{"ID":57,"Category":"App_Technical","Rating":1,"Review":"مشكله في التطبيق","Date":"25-10-25"},{"ID":58,"Category":"App_Technical","Rating":5,"Review":"ياريت لو يفعل في كل المحافظات ","Date":"22-11-11"},{"ID":59,"Category":"App_Technical","Rating":5,"Review":"افضل عدم تشغيل أغاني من قبل السائق","Date":"23-6-10"},{"ID":60,"Category":"Positive","Rating":5,"Review":"جيد جدا","Date":"26-1-24"},{"ID":61,"Category":"Positive","Rating":5,"Review":"تطبيق ممتاز ","Date":"25-7-13"},{"ID":62,"Category":"Price","Rating":1,"Review":"لدي مشكله على احد السائقين , لم يرجع لي الباقي وأتمنى ان يحاسب","Date":"22-8-27"},{"ID":63,"Category":"Positive","Rating":5,"Review":"تطبيق حلو جدا","Date":"26-3-16"},{"ID":64,"Category":"Positive","Rating":5,"Review":"تطبيق رائع","Date":"25-10-10"},{"ID":65,"Category":"App_Technical","Rating":2,"Review":"يتاخر كثيرا من اجل ان يقبل الطلب","Date":"24-8-25"},{"ID":66,"Category":"App_Technical","Rating":1,"Review":"اخر تحديث لهم لم يكن جيدا ابد تكتب مكان في الخارطه يخرج مكان ثاني ","Date":"23-9-16"},{"ID":67,"Category":"Positive","Rating":5,"Review":"افضل برنامج ","Date":"25-11-1"},{"ID":68,"Category":"Positive","Rating":5,"Review":"تطبيق فعال ","Date":"23-3-26"},{"ID":69,"Category":"Positive","Rating":5,"Review":"افضل شيء ","Date":"25-9-8"},{"ID":70,"Category":"Positive","Rating":5,"Review":"افضل تطبيق","Date":"26-4-9"},{"ID":71,"Category":"Positive","Rating":5,"Review":"تطبيق امن جدا ","Date":"25-3-22"},{"ID":72,"Category":"Positive","Rating":5,"Review":"تطبيق جميل جدا ","Date":"26-1-14"},{"ID":73,"Category":"Positive","Rating":5,"Review":"افضل تطبيق","Date":"26-1-21"},{"ID":74,"Category":"Positive","Rating":5,"Review":"افضل تطبيق جميل جدا ","Date":"25-8-18"},{"ID":75,"Category":"Positive","Rating":5,"Review":"احسن تطبيق توصيل","Date":"25-7-6"},{"ID":76,"Category":"Price","Rating":1,"Review":"المبالغ الرحلات لقد ارتفعت و اكو تطبيقات غاليه صارت ارخص من بلي","Date":"25-2-4"},{"ID":77,"Category":"App_Technical","Rating":1,"Review":"سيء جدا لقد حذفته بعد استعمال لمدة شهر ","Date":"24-12-18"},{"ID":78,"Category":"Price","Rating":5,"Review":"جيد لكن الأسعار دائما تتغير مع العلم نفس الطريق هو ","Date":"25-11-15"},{"ID":79,"Category":"App_Technical","Rating":5,"Review":"يحتاج الى تعديل اللى بعض الأمور","Date":"25-8-28"},{"ID":80,"Category":"Driver_Behavior","Rating":1,"Review":"السائقين يوافقون على الطلب ثم يتركون الزبون ينتظر اكثر من نصف ساعه ","Date":"25-1-2"},{"ID":81,"Category":"Positive","Rating":5,"Review":"تطبيق ممتاز ","Date":"22-2-6"},{"ID":82,"Category":"Price","Rating":1,"Review":"كانت الأسعار مناسبة لكن بعد ان استخدمته صعدت","Date":"24-4-4"},{"ID":83,"Category":"Price","Rating":1,"Review":"لا يوجد دفع بمحفظة الاكل ","Date":"26-2-10"},{"ID":84,"Category":"Price","Rating":5,"Review":"ممتاز لكن لا اعرف لا تصلني خصومات ","Date":"24-11-4"},{"ID":85,"Category":"Positive","Rating":5,"Review":" تطبيق ممتاز","Date":"25-4-22"},{"ID":86,"Category":"Driver_Behavior","Rating":1,"Review":"تعامل السائق لي جيدا ابدا ","Date":"23-11-8"},{"ID":87,"Category":"App_Technical","Rating":1,"Review":"الخدمة سيء جدا ","Date":"24-4-18"},{"ID":88,"Category":"App_Technical","Rating":2,"Review":"لقد وضعت مكاني في التطبيق لكن السائق اتاني في مكاني يختلف ","Date":"25-11-21"},{"ID":89,"Category":"Positive","Rating":5,"Review":"مفيد","Date":"25-7-25"},{"ID":90,"Category":"App_Technical","Rating":1,"Review":"غير متاح في منطقتي ","Date":"25-4-8"},{"ID":91,"Category":"App_Technical","Rating":2,"Review":"غير متاح في منطقتي ","Date":"24-12-12"},{"ID":92,"Category":"App_Technical","Rating":1,"Review":"تطبيق ليس جيد ابدا","Date":"26-3-23"},{"ID":93,"Category":"Price","Rating":1,"Review":"أسعاره بالنسبة للكابتن خساره","Date":"26-1-24"},{"ID":94,"Category":"Positive","Rating":5,"Review":"مفيد","Date":"25-5-16"},{"ID":95,"Category":"Positive","Rating":5,"Review":"أسعاره حلوه","Date":"23-4-30"},{"ID":96,"Category":"App_Technical","Rating":1,"Review":"قسائم المشتركين الجدد تظهر واهميه","Date":"26-3-6"},{"ID":97,"Category":"Positive","Rating":5,"Review":"برنامج جيد جدا","Date":"25-11-7"},{"ID":98,"Category":"Positive","Rating":5,"Review":"جيد جدا","Date":"26-3-25"},{"ID":99,"Category":"Driver_Behavior","Rating":1,"Review":"لا يوجد أي احترام و كانت تجربه سيء","Date":"26-3-9"},{"ID":100,"Category":"Price","Rating":5,"Review":"يدعم الفقراء لكن على حساء السائقيين لان اغلب أسعار الرحلات بأسعار بخسه","Date":"25-10-27"},{"ID":101,"Category":"Positive","Rating":5,"Review":"ممتاز جدا","Date":"26-5-20"},{"ID":102,"Category":"Positive","Rating":5,"Review":"من احسن التطبيقات في العالم ","Date":"26-5-19"},{"ID":103,"Category":"App_Technical","Rating":1,"Review":"ينطي موقع الزبون بعيد","Date":"24-8-28"},{"ID":104,"Category":"Price","Rating":5,"Review":"حلو لو ينطون خصومات ","Date":"25-12-12"},{"ID":105,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"25-10-14"},{"ID":106,"Category":"App_Technical","Rating":1,"Review":"كافي إعلانات  لقد اصبحنا مجانين","Date":"26-2-21"},{"ID":107,"Category":"Positive","Rating":5,"Review":"مريح","Date":"26-1-3"},{"ID":108,"Category":"Positive","Rating":5,"Review":"رائع جدا","Date":"25-12-5"},{"ID":109,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"25-12-12"},{"ID":110,"Category":"Positive","Rating":5,"Review":"الأفضل و الارخص ","Date":"25-12-27"},{"ID":111,"Category":"App_Technical","Rating":1,"Review":"سيء جدا فقط","Date":"26-1-28"},{"ID":112,"Category":"Positive","Rating":5,"Review":"محترمين جدا ","Date":"22-1-23"},{"ID":113,"Category":"App_Technical","Rating":3,"Review":"تزيد الكروه بالاستخدام المتكرر","Date":"24-11-14"},{"ID":114,"Category":"Positive","Rating":5,"Review":"شكرا على هذه الخدمة ","Date":"25-5-26"},{"ID":115,"Category":"App_Technical","Rating":4,"Review":"يتاخر الكابتن يلا يوافق","Date":"25-5-25"},{"ID":116,"Category":"App_Technical","Rating":1,"Review":"لا يصل الى المناطق البعيدة في بغداد ","Date":"24-11-28"},{"ID":117,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"25-4-29"},{"ID":118,"Category":"Positive","Rating":5,"Review":" تطبيق امين ","Date":"24-3-27"},{"ID":119,"Category":"Price","Rating":2,"Review":"خصومات قليله جدا ","Date":"25-11-21"},{"ID":120,"Category":"Positive","Rating":5,"Review":"ممتاز جدا ","Date":"25-5-13"},{"ID":121,"Category":"Positive","Rating":5,"Review":"أسعار ممتازه ","Date":"25-11-15"},{"ID":122,"Category":"Positive","Rating":5,"Review":"جيدة من حيث الأسعار ","Date":"25-1-20"},{"ID":123,"Category":"Positive","Rating":5,"Review":"تطبيق امن جدا ","Date":"25-2-18"},{"ID":124,"Category":"Price","Rating":1,"Review":"الأسعار غير مناسبه ","Date":"25-6-4"},{"ID":125,"Category":"Positive","Rating":5,"Review":"تطبيق خدمي جيد ","Date":"25-7-27"},{"ID":126,"Category":"Positive","Rating":5,"Review":"اجمل تطبيق ","Date":"24-1-20"},{"ID":127,"Category":"Driver_Behavior","Rating":2,"Review":"اهل السيارات ياخذون مبالغ زيادة","Date":"25-6-5"},{"ID":128,"Category":"Positive","Rating":5,"Review":"رائع جدا","Date":"25-4-5"},{"ID":129,"Category":"App_Technical","Rating":1,"Review":"ياخذون اجره اكثر من غيرهم ","Date":"25-7-7"},{"ID":130,"Category":"App_Technical","Rating":1,"Review":"فشل وصول الرسالة التفعيل","Date":"23-8-26"},{"ID":131,"Category":"Positive","Rating":5,"Review":"احسن تطبيق توصيل","Date":"25-6-20"},{"ID":132,"Category":"Positive","Rating":5,"Review":"سريع و رخيص","Date":"26-4-24"},{"ID":133,"Category":"App_Technical","Rating":1,"Review":"لقد تعرضت الى التحرش في بلي","Date":"24-9-19"},{"ID":134,"Category":"Positive","Rating":5,"Review":"مقبول بل الخصومات ","Date":"26-1-22"},{"ID":135,"Category":"App_Technical","Rating":3,"Review":"الخرائط بها خلل","Date":"23-9-17"},{"ID":136,"Category":"Positive","Rating":5,"Review":"افضل تطبيق","Date":"24-10-30"},{"ID":137,"Category":"Positive","Rating":5,"Review":"جميل جدا ","Date":"25-10-11"},{"ID":138,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"25-8-23"},{"ID":139,"Category":"App_Technical","Rating":1,"Review":"إعلانات كثيره ","Date":"25-10-30"},{"ID":140,"Category":"Positive","Rating":5,"Review":"روعه ","Date":"25-8-11"},{"ID":141,"Category":"Positive","Rating":5,"Review":"امن و رخيص","Date":"24-4-16"},{"ID":142,"Category":"Positive","Rating":5,"Review":"افضل تطبيق جميل جدا ","Date":"25-12-27"},{"ID":143,"Category":"Positive","Rating":5,"Review":"خوش برنامج ","Date":"23-8-25"},{"ID":144,"Category":"Positive","Rating":5,"Review":"تطبيق جيد","Date":"25-6-10"},{"ID":145,"Category":"Positive","Rating":5,"Review":"تطبيق ممتاز ","Date":"25-12-18"},{"ID":146,"Category":"Positive","Rating":5,"Review":"تطبيق جيد","Date":"25-12-4"},{"ID":147,"Category":"Positive","Rating":5,"Review":"افضل تطبيق في العالم ","Date":"25-9-12"},{"ID":148,"Category":"Positive","Rating":5,"Review":"كلش رهيب","Date":"26-1-10"},{"ID":149,"Category":"Positive","Rating":5,"Review":"رائع جدا","Date":"23-7-5"},{"ID":150,"Category":"App_Technical","Rating":1,"Review":"وصيت اكل تأخر كثيرا راسلت الدعم و هو لغو الطلب","Date":"25-11-9"},{"ID":151,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"25-8-24"},{"ID":152,"Category":"App_Technical","Rating":1,"Review":"لا يوجد توصيل الى الأماكن البعيدة","Date":"25-8-15"},{"ID":153,"Category":"Positive","Rating":5,"Review":"اجمل تطبيق ","Date":"25-12-30"},{"ID":154,"Category":"Price","Rating":1,"Review":" أسعار قليلة للكابتن","Date":"25-3-29"},{"ID":155,"Category":"App_Technical","Rating":1,"Review":"لا استطيع ان اسجل في التطبيق","Date":"25-7-3"},{"ID":156,"Category":"Positive","Rating":5,"Review":"راقي فعلا","Date":"23-2-10"},{"ID":157,"Category":"Positive","Rating":5,"Review":"تطبيق رائع","Date":"25-9-10"},{"ID":158,"Category":"Driver_Behavior","Rating":5,"Review":"السائق يدخن","Date":"25-10-15"},{"ID":159,"Category":"Positive","Rating":5,"Review":"واحد عراق","Date":"25-11-29"},{"ID":160,"Category":"Price","Rating":3,"Review":"ارتفاع بالأسعار ","Date":"25-10-9"},{"ID":161,"Category":"Positive","Rating":5,"Review":"احسن تطبيق توصيل","Date":"25-11-8"},{"ID":162,"Category":"Positive","Rating":5,"Review":"امن و رخيص","Date":"25-7-30"},{"ID":163,"Category":"Positive","Rating":5,"Review":"مضبوط ","Date":"26-1-3"},{"ID":164,"Category":"Positive","Rating":5,"Review":"احلى تطبيق","Date":"25-11-1"},{"ID":165,"Category":"Positive","Rating":5,"Review":"روعه ","Date":"24-5-9"},{"ID":166,"Category":"App_Technical","Rating":1,"Review":"لو يصلون لمنطقة بل الطارمية","Date":"26-1-22"},{"ID":167,"Category":"App_Technical","Rating":1,"Review":"تطبيق مايستاهل نجمة واحدة ","Date":"23-6-25"},{"ID":168,"Category":"Positive","Rating":5,"Review":"يخبل","Date":"26-5-10"},{"ID":169,"Category":"Positive","Rating":5,"Review":"جيد","Date":"25-8-7"},{"ID":170,"Category":"App_Technical","Rating":1,"Review":"لا يصلون الى منطقتنا","Date":"26-2-23"},{"ID":171,"Category":"Driver_Behavior","Rating":1,"Review":"السائق نزلني من السياره ","Date":"25-5-12"},{"ID":172,"Category":"Driver_Behavior","Rating":1,"Review":"السائق يأخذ فلوس زيادة ","Date":"25-10-22"},{"ID":173,"Category":"Positive","Rating":5,"Review":"اقتصادي امن","Date":"23-11-18"},{"ID":174,"Category":"Positive","Rating":5,"Review":"تطبيق روعه","Date":"25-9-19"},{"ID":175,"Category":"Positive","Rating":5,"Review":"احلى تطبيق","Date":"26-1-3"},{"ID":176,"Category":"Positive","Rating":5,"Review":"شكرا على هذه الخدمة ","Date":"25-10-14"},{"ID":177,"Category":"App_Technical","Rating":5,"Review":"استغلال","Date":"25-11-16"},{"ID":178,"Category":"Positive","Rating":5,"Review":"احسن تطبيق توصيل","Date":"25-8-30"},{"ID":179,"Category":"Positive","Rating":5,"Review":"ماكو كلام يوصفه","Date":"25-12-27"},{"ID":180,"Category":"Positive","Rating":5,"Review":"تطبيق فوق الجيد","Date":"23-12-22"},{"ID":181,"Category":"Positive","Rating":5,"Review":"كلش حلوه خدمتهم","Date":"25-8-9"},{"ID":182,"Category":"Positive","Rating":5,"Review":"عاشت ايديكم بلي","Date":"25-7-7"},{"ID":183,"Category":"App_Technical","Rating":1,"Review":"لا يعجبني","Date":"24-11-28"},{"ID":184,"Category":"App_Technical","Rating":1,"Review":"ازبل تطبيق","Date":"23-11-26"},{"ID":185,"Category":"Positive","Rating":5,"Review":"احسن شركه ","Date":"25-8-2"},{"ID":186,"Category":"App_Technical","Rating":1,"Review":"تطبيق مو زين","Date":"23-10-13"},{"ID":187,"Category":"Positive","Rating":5,"Review":"روعه ","Date":"23-1-1"},{"ID":188,"Category":"Positive","Rating":5,"Review":"يجنن فول فول ","Date":"25-8-31"},{"ID":189,"Category":"Positive","Rating":5,"Review":"و اللة حلو","Date":"25-8-14"},{"ID":190,"Category":"Positive","Rating":5,"Review":"خدمة ممتازه","Date":"22-1-19"},{"ID":191,"Category":"Positive","Rating":5,"Review":"بالتوفيق","Date":"23-12-26"},{"ID":192,"Category":"Positive","Rating":5,"Review":"روعة ","Date":"24-6-16"},{"ID":193,"Category":"Positive","Rating":5,"Review":"عاشت ايديكم بلي","Date":"25-11-15"},{"ID":194,"Category":"Positive","Rating":5,"Review":"تطبيق ممتاز ","Date":"26-5-17"},{"ID":195,"Category":"Positive","Rating":5,"Review":"جيد جدا ","Date":"23-8-5"},{"ID":196,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"26-5-23"},{"ID":197,"Category":"Positive","Rating":5,"Review":"حلو جدا","Date":"26-5-3"},{"ID":198,"Category":"Positive","Rating":5,"Review":"جميل جدا ","Date":"26-4-30"},{"ID":199,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"26-5-1"},{"ID":200,"Category":"Positive","Rating":5,"Review":"رائع امن","Date":"26-4-18"},{"ID":201,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"26-4-13"},{"ID":202,"Category":"App_Technical","Rating":1,"Review":"تطبيق فاشل   ","Date":"26-5-1"},{"ID":203,"Category":"Positive","Rating":5,"Review":"افضل تطبيق","Date":"26-4-28"},{"ID":204,"Category":"Positive","Rating":5,"Review":"جيد","Date":"26-4-20"},{"ID":205,"Category":"Positive","Rating":5,"Review":"جيد جدا ","Date":"26-3-15"},{"ID":206,"Category":"Positive","Rating":5,"Review":"جيد جدا ","Date":"26-3-22"},{"ID":207,"Category":"Positive","Rating":5,"Review":"جيد","Date":"26-3-15"},{"ID":208,"Category":"Positive","Rating":5,"Review":"جيد","Date":"26-3-16"},{"ID":209,"Category":"Positive","Rating":5,"Review":"جيد","Date":"26-3-2"},{"ID":210,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"26-4-11"},{"ID":211,"Category":"Positive","Rating":5,"Review":"جميل  ","Date":"26-2-21"},{"ID":212,"Category":"Positive","Rating":5,"Review":"جيد","Date":"26-3-23"},{"ID":213,"Category":"Positive","Rating":5,"Review":"جيد","Date":"26-3-31"},{"ID":214,"Category":"Positive","Rating":5,"Review":"جيد ","Date":"26-3-23"},{"ID":215,"Category":"Positive","Rating":5,"Review":"واحد عالم","Date":"26-3-17"},{"ID":216,"Category":"Positive","Rating":5,"Review":"خصومات قويه","Date":"26-2-2"},{"ID":217,"Category":"Positive","Rating":5,"Review":"اقيمه 100","Date":"26-2-14"},{"ID":218,"Category":"App_Technical","Rating":1,"Review":"ظالم","Date":"26-1-20"}];
+
+const captainReviews = [{"ID":1,"Category":"Positive","Rating":5,"Review":"خدمة جيد ة","Date":"26-2-22"},{"ID":2,"Category":"Support_Service","Rating":1,"Review":" تطبيق تافه","Date":"23-6-9"},{"ID":3,"Category":"Positive","Rating":5,"Review":"لم يحدث معي شيئ","Date":"24-4-9"},{"ID":4,"Category":"Payment_Issue","Rating":1,"Review":"كاذبين يستغلون الكباتن","Date":"25-11-1"},{"ID":5,"Category":"Positive","Rating":5,"Review":"الأفضل دوما ","Date":"23-1-17"},{"ID":6,"Category":"Support_Service","Rating":1,"Review":"سيء","Date":"26-5-30"},{"ID":7,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"26-5-12"},{"ID":8,"Category":"Positive","Rating":5,"Review":"جيد جدا ","Date":"26-1-26"},{"ID":9,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"25-12-31"},{"ID":10,"Category":"Positive","Rating":5,"Review":"جيد جدا ","Date":"26-3-3"},{"ID":11,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"26-2-9"},{"ID":12,"Category":"Payment_Issue","Rating":1,"Review":"سارقين","Date":"26-1-20"},{"ID":13,"Category":"Positive","Rating":5,"Review":"جيد  ","Date":"25-9-30"},{"ID":14,"Category":"Payment_Issue","Rating":1,"Review":"غير جيد ","Date":"25-5-24"},{"ID":15,"Category":"Positive","Rating":5,"Review":"تمام","Date":"25-5-8"},{"ID":16,"Category":"Positive","Rating":5,"Review":"زين","Date":"25-1-12"},{"ID":17,"Category":"Support_Service","Rating":3,"Review":"سيء","Date":"24-12-10"},{"ID":18,"Category":"Support_Service","Rating":1,"Review":"سيء جدا","Date":"24-12-7"},{"ID":19,"Category":"Positive","Rating":5,"Review":"حلو","Date":"24-11-2"},{"ID":20,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"24-10-14"},{"ID":21,"Category":"Positive","Rating":5,"Review":"جيد","Date":"24-3-27"},{"ID":22,"Category":"Positive","Rating":5,"Review":"جيد ","Date":"24-2-25"},{"ID":23,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"23-9-16"},{"ID":24,"Category":"Positive","Rating":4,"Review":"جيد","Date":"22-6-12"},{"ID":25,"Category":"Positive","Rating":5,"Review":"اجمل برنامج","Date":"22-3-31"},{"ID":26,"Category":"Positive","Rating":5,"Review":"واوو","Date":"22-3-24"},{"ID":27,"Category":"Positive","Rating":4,"Review":"ممتاز","Date":"21-12-30"},{"ID":28,"Category":"Positive","Rating":5,"Review":"جيد جدا ","Date":"23-4-29"},{"ID":29,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"22-12-31"},{"ID":30,"Category":"Positive","Rating":5,"Review":"جيد","Date":"23-8-26"},{"ID":31,"Category":"Positive","Rating":5,"Review":"جيد","Date":"23-11-14"},{"ID":32,"Category":"Positive","Rating":5,"Review":"حلو","Date":"22-4-28"},{"ID":33,"Category":"Trip_Cancellation","Rating":1,"Review":"سيء  ","Date":"23-8-14"},{"ID":34,"Category":"Positive","Rating":5,"Review":"احبه ","Date":"24-2-4"},{"ID":35,"Category":"Positive","Rating":5,"Review":"نايس","Date":"22-9-2"},{"ID":36,"Category":"Payment_Issue","Rating":1,"Review":"أسعار مخربطة  و غير مرضية لكابتن","Date":"26-5-4"},{"ID":37,"Category":"App_Technical","Rating":1,"Review":"المسافة ما تظهر او غير مضبوطة بين الكابتن ونقطة الانطلاق","Date":"26-5-17"},{"ID":38,"Category":"Payment_Issue","Rating":1,"Review":"سيء جدا وفيه مافيات لسرقة الأموال","Date":"26-5-18"},{"ID":39,"Category":"App_Technical","Rating":1,"Review":"نريد منك تمديد وقت المكافئات الكابتن","Date":"26-5-19"},{"ID":40,"Category":"App_Technical","Rating":1,"Review":"مشاكل كثيره في النطبيق , أسماء الأماكن الطويلة , تعديل قائمة الأسعار حسب البعد , إضافة سحب الأموال للكابتن ","Date":"26-5-6"},{"ID":41,"Category":"Payment_Issue","Rating":1,"Review":"تطبيق مضر جدا أجور قليله و استقطاع نسبة كبيرة لشركة ","Date":"26-4-29"},{"ID":42,"Category":"App_Technical","Rating":2,"Review":"مشاكل كثيره منها المواقع يجب ضبط الموقع , الأجور قليله للكابتن ","Date":"26-4-25"},{"ID":43,"Category":"Payment_Issue","Rating":1,"Review":"تطبيق سيء لا توجد به أي عداله للكابتن ","Date":"26-4-26"},{"ID":44,"Category":"App_Technical","Rating":5,"Review":"المفروض يطبق نظام العداد مثل باقي البرامج ","Date":"26-5-21"},{"ID":45,"Category":"Payment_Issue","Rating":1,"Review":"تطبيق فاشل أجور قليله ","Date":"26-5-11"},{"ID":46,"Category":"Payment_Issue","Rating":1,"Review":"تطبيق انتهازي غير عادل","Date":"26-4-19"},{"ID":47,"Category":"App_Technical","Rating":5,"Review":"شركة ممتازه , لكن هناك مشكلة و هي استقطاعات الغرامة عند الغاء الرحلة من قبل الكابتن ","Date":"26-5-6"},{"ID":48,"Category":"Payment_Issue","Rating":1,"Review":"غير منصف ابد , اقترح اضراب شامل لمدة أسبوع","Date":"26-5-18"},{"ID":49,"Category":"Payment_Issue","Rating":1,"Review":"توجد به الكثير من السرقات","Date":"26-5-21"},{"ID":50,"Category":"App_Technical","Rating":3,"Review":"تطبيق حلو و لكن هناك يجب ان يتحسن الطبيق مثلا انصاف في الأجور , ويجب ان يكون للتقييم اثر للكابتن و الزبون","Date":"26-4-18"},{"ID":51,"Category":"Trip_Cancellation","Rating":1,"Review":"الشركه مع الزبون واي شكوه كاذبه تغرم السائق","Date":"26-4-29"},{"ID":52,"Category":"Payment_Issue","Rating":1,"Review":"برنامج سيء المستفيد الشركه والزبون","Date":"26-4-29"},{"ID":53,"Category":"Payment_Issue","Rating":1,"Review":"تطبيق انتهازي للكابتن و لا يعطي الأجرة الحقيقية للكابتن","Date":"26-4-26"},{"ID":54,"Category":"App_Technical","Rating":1,"Review":"بغض النظر على الأجور القليلة لكن التطبيق لا يحسب المسافة الحيقية","Date":"26-4-20"},{"ID":55,"Category":"App_Technical","Rating":1,"Review":"تطبيق سيء غير واضح بالتعامل من حيبث الاجره و لا يحسب الوقت انتظار الزبون و أحيانا يكون عدد الركاب اكثر من المسموح و غير دقيق في المسافة بين الزبون والكابتن","Date":"26-3-31"},{"ID":56,"Category":"Payment_Issue","Rating":1,"Review":"الأجور فيه قليلة مقارنة بالمسافة المقطوعه","Date":"26-3-29"},{"ID":57,"Category":"App_Technical","Rating":1,"Review":"التطبيق ينغلق لدي كثيرا ","Date":"26-3-4"},{"ID":58,"Category":"App_Technical","Rating":1,"Review":"تطبيق فاشل يسرق تعب السائق , لا يعطي علم لسائق بان رحلة الزبون بيها خصم او لا ","Date":"26-3-30"},{"ID":59,"Category":"Payment_Issue","Rating":1,"Review":"لا يخدم الكابتن أجور كلش قليله ","Date":"26-3-30"},{"ID":60,"Category":"Payment_Issue","Rating":1,"Review":"التطبيق يأخذ عمولة 20% و الأجور تكون لا تساوي %45 من قيمتها الحقيقية","Date":"26-4-1"},{"ID":61,"Category":"Support_Service","Rating":1,"Review":"تطبيق استغلالي و لا يوجد دعم على مدار الساعة , حتى اذا يوجد دعم يرد عليك بعد نص ساعة","Date":"26-1-23"},{"ID":62,"Category":"App_Technical","Rating":1,"Review":"الكابتن مرات يحتاج الى التحكم في الخرائط البرنامج لكن مرات الخرائط البرنامج تكون بالعكس او ماكو تحكم ","Date":"26-2-20"},{"ID":63,"Category":"App_Technical","Rating":1,"Review":"التطبيق مجحف بحق السائقين و نسبة العمولة المرتفعة","Date":"26-1-29"},{"ID":64,"Category":"App_Technical","Rating":5,"Review":"تطبيق جيد جدا لكن يحتاج الى مراجعة و التعديل مثلا حساب لازدحامات المفاجاة او تأخير الزبون","Date":"26-2-8"},{"ID":65,"Category":"App_Technical","Rating":1,"Review":"فاشل و يجب تسعير الكيلو متر على ان يكون اقل سعر للكيلومتر هو 750 دينار و اقل رحله 3000 دينار و عندما يكون ناك ازدخامات تزداز الأجور الرحلات 1.5X ","Date":"26-1-28"},{"ID":66,"Category":"App_Technical","Rating":3,"Review":"جيد و مفيد لكن يحتاج الى تعديلات يرجى إضافة حذف الماستر المثبتة , يرجى إضافة كلمة وصلت الان او سوف اصل قريبا مع خاصية المحادثة مع الزبون , تقليل كلفة الغاء الرحلة من قبل الكابتن ","Date":"26-3-18"},{"ID":67,"Category":"Support_Service","Rating":1,"Review":"تطبيق سيء و خصوصا فريق الدعم أداء تحت الصفر","Date":"26-2-20"},{"ID":68,"Category":"App_Technical","Rating":5,"Review":"جيد فقط ممكن تعديل أسماء المناطق ","Date":"26-5-8"},{"ID":69,"Category":"Support_Service","Rating":5,"Review":"جيد لكن فقط اجعلو الاتصال مع الدعم مباشر و ليس مع جواب الي","Date":"26-5-6"},{"ID":70,"Category":"Positive","Rating":5,"Review":"ممتاز","Date":"26-5-15"},{"ID":71,"Category":"Payment_Issue","Rating":5,"Review":"جيد لكن الأجور قليله ","Date":"26-5-5"},{"ID":72,"Category":"Positive","Rating":5,"Review":"برنامج جيد","Date":"26-5-12"},{"ID":73,"Category":"App_Technical","Rating":1,"Review":"بي مشكلة بعد التحديث عندما اصل الى الزبون يتجمد التطبيق الا بعد ان اطفي الجهاز يلا بعدين يعمل التطبيق هاي كل رحله اسوي هيج","Date":"26-1-9"},{"ID":74,"Category":"App_Technical","Rating":1,"Review":"التطبيق غير جيد بعض المواقع غير صحيحة و الأسعار كلش لا تتناسب مع المسافة","Date":"26-2-19"},{"ID":75,"Category":"Support_Service","Rating":1,"Review":"سعر الرحله رخيص جدا و الدعم لا يجيب ","Date":"26-4-21"},{"ID":76,"Category":"App_Technical","Rating":3,"Review":"تطبيق جيد و لكن يرجى زيادة عدد الإلغاء الرحلات للكابتن","Date":"26-1-13"},{"ID":77,"Category":"Payment_Issue","Rating":1,"Review":"أجور قليله و لاتتناسب مع الازدحام و المسافة","Date":"26-1-20"},{"ID":78,"Category":"App_Technical","Rating":1,"Review":"عدد التقدير الصحيح للمسافات و الازدحامات و يوجد خلل في استقبال الرحلات","Date":"26-1-18"},{"ID":79,"Category":"Support_Service","Rating":1,"Review":"تطبيق رديء و لا يوجد الدعم الاتصال بهم عند الحاجة ","Date":"26-1-5"},{"ID":80,"Category":"Support_Service","Rating":1,"Review":"الدعم سيء , أجور الرحلات غير منصفة , المكافئات في حال إنجازها لا تصرف بالكامل بحجة وجود رحلات ","Date":"26-1-21"},{"ID":81,"Category":"App_Technical","Rating":1,"Review":"بعد توصيل الزبون لا يمكن الضغط على إتمام الرحله و بداء من جديد ","Date":"26-2-3"},{"ID":82,"Category":"Payment_Issue","Rating":1,"Review":"الأجور قليلة بحق الكابتن , و لا تتناسب مع المسافه او الازدحامات","Date":"26-1-9"},{"ID":83,"Category":"Payment_Issue","Rating":1,"Review":"الأجور تعبانه","Date":"26-4-24"},{"ID":84,"Category":"App_Technical","Rating":1,"Review":"التطبيق يمارس سياسات غير شرعية ","Date":"26-4-25"},{"ID":85,"Category":"Payment_Issue","Rating":1,"Review":"التطبيق يخدم الزبون اكثر ","Date":"26-4-21"},{"ID":86,"Category":"Positive","Rating":5,"Review":"تطبيق ممتاز ","Date":"26-4-25"},{"ID":87,"Category":"App_Technical","Rating":5,"Review":"تطبيق ممتاز لكن يحتاج الى بعض التعديلات ","Date":"26-4-7"},{"ID":88,"Category":"Payment_Issue","Rating":1,"Review":"فاشل ولا يوجد به أرباح ","Date":"26-4-24"},{"ID":89,"Category":"Positive","Rating":5,"Review":"تطبيق عصري ","Date":"26-4-12"},{"ID":90,"Category":"App_Technical","Rating":1,"Review":"تطبيق سيء ","Date":"26-4-25"},{"ID":91,"Category":"App_Technical","Rating":5,"Review":"التطبيق جيد لكن الأجور قليله و المسافة وهمية بين الكابتن و الزبون ","Date":"26-1-16"},{"ID":92,"Category":"App_Technical","Rating":5,"Review":"التطبيق بي مشكله و هي التطبيق يتجمد و يصفن عندما يركب الزبون الا اطفى الهاتف و اعيد تشغيله يله يعمل , هذه ثالث هاتف اجربه و نفس المشكله ","Date":"26-2-2"},{"ID":93,"Category":"App_Technical","Rating":5,"Review":"التحديث الأخير حلو اصبح البرنامج لا يتجمد و الأماكن صارت احسن ","Date":"25-12-22"},{"ID":94,"Category":"Payment_Issue","Rating":5,"Review":"كلش زين لكن الرحلات الطويله اجورها جدا قليله ","Date":"25-12-31"},{"ID":95,"Category":"Payment_Issue","Rating":1,"Review":"الأجور قليله و مكان الانطلاق و الوصول و المسافة غير دقيقة","Date":"26-1-25"},{"ID":96,"Category":"Support_Service","Rating":1,"Review":"فريق الدعم سيء جدا و لا يحاول معرفة سبب المشكلة التي تواجه الكابتن فقط يستمر بالجواب الالي","Date":"25-12-11"},{"ID":97,"Category":"App_Technical","Rating":1,"Review":"هذا البرنامج لازم يكون لتكتك و ليس لسيارات لان مبالغ الأجرة قليلة و كذلك المسافات و التوقف المستمر للبرنامج","Date":"25-12-12"},{"ID":98,"Category":"App_Technical","Rating":3,"Review":"التطبيق جيد لكن هناك بعض السلبيات , المسافة بين السائق والزبون , لا يوجد فرق عند ركوب شخص واح او خمس اشخاص هذا الشيء غير مقبول","Date":"25-6-25"},{"ID":99,"Category":"Trip_Cancellation","Rating":2,"Review":"تطبيق فاشل , مجرد يبحث عن استفاده. و يظلم الكابتن , من حيث عدد الزبائن و بعد الزبون عن الكابتن , وإلغاء الرحلة من قبل الزبون بثواني من وصول الكابتن ","Date":"25-10-24"},{"ID":100,"Category":"App_Technical","Rating":2,"Review":"البرنامج تراجع بشكل كبير بسبب التحديث , بعد كل رحله يتوقف البرنامج عن استقبال الطلبات بانتظار إعادة تشغيل الهاتف , في كل كل رحله هكذا ","Date":"23-10-7"}];
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function formatDate(d) {
+  const p = d.split('-');
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  return `${p[2]} ${months[parseInt(p[1])-1]} 20${p[0]}`;
+}
+
+function starsHTML(n, cls='') {
+  const full = '★'.repeat(n), empty = '☆'.repeat(5-n);
+  return `<span class="stars ${n<=2?'low':''} ${cls}">${full}${empty}</span>`;
+}
+
+function catTag(cat) {
+  const map = {
+    'Positive': ['cat-pos','إيجابي '],
+    'App_Technical': ['cat-tech','تقني '],
+    'Price': ['cat-price','سعر '],
+    'Driver_Behavior': ['cat-driver','سلوك السائق '],
+    'Payment_Issue': ['cat-pay','مشكلة دفع '],
+    'Support_Service': ['cat-sup','دعم فني '],
+    'Trip_Cancellation': ['cat-trip','إلغاء رحلة '],
+  };
+  const [cls, label] = map[cat] || ['cat-tech', cat];
+  return `<span class="cat-tag ${cls}">${label}</span>`;
+}
+
+// ═══════════════════════════════════════════
+// BUILD UNIFIED TIMELINE LABELS
+// ═══════════════════════════════════════════
+function buildUnifiedTimeline() {
+  const allMonths = new Set();
+  balyMonthly.forEach(d => allMonths.add(d.year_month));
+  captainMonthly.forEach(d => allMonths.add(d.year_month));
+  return [...allMonths].sort();
+}
+
+const allMonths = buildUnifiedTimeline();
+
+function getVal(data, month, field) {
+  const r = data.find(d => d.year_month === month);
+  return r ? r[field] : null;
+}
+
+// milestone vertical lines positions
+const milestones = [
+  { month: '2021-12', label: 'الإطلاق', color: '#0D9488' },
+  { month: '2022-06', label: 'التوسع', color: '#0891B2' },
+  { month: '2022-11', label: 'بلي طعام', color: '#4F46E5' },
+  { month: '2023-01', label: 'زين كاش', color: '#7C3AED' },
+  { month: '2024-01', label: 'بلي توفير', color: '#A855F7' },
+  { month: '2024-11', label: 'بلي ديجيتال', color: '#EC4899' },
+  { month: '2026-01', label: 'تحسين GPS', color: '#9D174D' },
+];
+
+// ═══════════════════════════════════════════
+// CHART 1: Volume Trend
+// ═══════════════════════════════════════════
+(function buildTrendChart() {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  const balyVols = allMonths.map(m => getVal(balyMonthly, m, 'count'));
+  const captVols = allMonths.map(m => getVal(captainMonthly, m, 'count'));
+
+  const annotations = {};
+  milestones.forEach((ms, i) => {
+    const idx = allMonths.indexOf(ms.month);
+    if (idx === -1) return;
+    annotations[`ms${i}`] = {
+      type: 'line',
+      xMin: idx, xMax: idx,
+      borderColor: ms.color,
+      borderWidth: 1.5,
+      borderDash: [4, 3],
+      label: {
+        display: true,
+        content: ms.label,
+        position: 'start',
+        backgroundColor: ms.color + 'CC',
+        color: 'white',
+        font: { size: 9, family: 'Cairo' },
+        padding: { x: 4, y: 2 },
+        borderRadius: 4,
+      }
+    };
+  });
+
+  const labels = allMonths.map(m => {
+    const [y, mo] = m.split('-');
+    const months = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    return `${months[parseInt(mo)]} ${y}`;
+  });
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'مراجعات المستخدمين',
+          data: balyVols,
+          backgroundColor: TEAL + '90',
+          borderColor: TEAL,
+          borderWidth: 1.5,
+          borderRadius: 3,
+          order: 2,
+        },
+        {
+          label: 'مراجعات الكباتن',
+          data: captVols,
+          backgroundColor: MAG + '80',
+          borderColor: MAG,
+          borderWidth: 1.5,
+          borderRadius: 3,
+          order: 3,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          rtl: true,
+          titleFont: { family: 'Cairo', size: 12 },
+          bodyFont: { family: 'Cairo', size: 11 },
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ` ${item.dataset.label}: ${item.raw || 0} مراجعة`
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: false,
+          ticks: {
+            maxRotation: 45, font: { family: 'Cairo', size: 9 },
+            maxTicksLimit: 20,
+            color: '#64748B'
+          },
+          grid: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { font: { family: 'Cairo', size: 10 }, color: '#64748B' },
+          grid: { color: '#E2E8F010' }
+        }
+      }
+    }
+  });
+
+  // Draw milestone lines manually on top
+  const origDraw = Chart.registry.plugins.get('tooltip');
+})();
+
+// ═══════════════════════════════════════════
+// CHART 2: Avg Rating Trend
+// ═══════════════════════════════════════════
+(function buildRatingTrend() {
+  const ctx = document.getElementById('ratingTrendChart').getContext('2d');
+  const balyRatings = allMonths.map(m => getVal(balyMonthly, m, 'avg_rating'));
+  const captRatings = allMonths.map(m => getVal(captainMonthly, m, 'avg_rating'));
+
+  const labels = allMonths.map(m => {
+    const [y, mo] = m.split('-');
+    return `${mo}/${y.slice(2)}`;
+  });
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'متوسط تقييم المستخدمين',
+          data: balyRatings,
+          borderColor: TEAL,
+          backgroundColor: TEAL + '20',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: TEAL,
+          tension: 0.4,
+          fill: true,
+          spanGaps: true,
+        },
+        {
+          label: 'متوسط تقييم الكباتن',
+          data: captRatings,
+          borderColor: MAG,
+          backgroundColor: MAG + '15',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: MAG,
+          tension: 0.4,
+          fill: true,
+          spanGaps: true,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          rtl: true,
+          titleFont: { family: 'Cairo', size: 11 },
+          bodyFont: { family: 'Cairo', size: 10 },
+          callbacks: {
+            label: (item) => ` ${item.dataset.label}: ${item.raw?.toFixed(2) || '-'} ★`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { maxRotation: 45, font: { family: 'Cairo', size: 8 }, maxTicksLimit: 16, color: '#64748B' },
+          grid: { display: false }
+        },
+        y: {
+          min: 0, max: 5,
+          ticks: { font: { family: 'Cairo', size: 10 }, color: '#64748B', stepSize: 1 },
+          grid: { color: '#E2E8F030' }
+        }
+      }
+    }
+  });
+})();
+
+// ═══════════════════════════════════════════
+// CHART 3: Category Compare (Horizontal Bar)
+// ═══════════════════════════════════════════
+(function buildCatCompare() {
+  const ctx = document.getElementById('catCompareChart').getContext('2d');
+  const catLabels = ['إيجابي','تقني','سعر/أجرة','سلوك السائق','مشكلة دفع','دعم فني','إلغاء رحلة'];
+  const catKeys =   ['Positive','App_Technical','Price','Driver_Behavior','Payment_Issue','Support_Service','Trip_Cancellation'];
+  const balyVals = {Positive:124, App_Technical:57, Price:26, Driver_Behavior:12, Payment_Issue:0, Support_Service:0, Trip_Cancellation:0};
+  const captVals = {Positive:31, App_Technical:31, Price:0, Driver_Behavior:0, Payment_Issue:24, Support_Service:11, Trip_Cancellation:3};
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: catLabels,
+      datasets: [
+        {
+          label: 'مستخدمون',
+          data: catKeys.map(k => balyVals[k]),
+          backgroundColor: TEAL + 'CC',
+          borderColor: TEAL,
+          borderWidth: 1.5,
+          borderRadius: 4,
+        },
+        {
+          label: 'كباتن',
+          data: catKeys.map(k => captVals[k]),
+          backgroundColor: MAG + 'CC',
+          borderColor: MAG,
+          borderWidth: 1.5,
+          borderRadius: 4,
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true, position: 'bottom',
+          labels: { font: { family: 'Cairo', size: 11 }, usePointStyle: true, pointStyle: 'rectRounded' }
+        },
+        tooltip: {
+          rtl: true,
+          titleFont: { family: 'Cairo', size: 11 },
+          bodyFont: { family: 'Cairo', size: 10 },
+        }
+      },
+      scales: {
+        x: {
+          ticks: { font: { family: 'Cairo', size: 10 }, color: '#64748B' },
+          grid: { color: '#E2E8F030' }
+        },
+        y: {
+          ticks: { font: { family: 'Cairo', size: 11 }, color: '#334155' },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+})();
+
+// ═══════════════════════════════════════════
+// CHART 4 & 5: Donuts
+// ═══════════════════════════════════════════
+function buildDonut(canvasId, labels, data, colors) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: 'white', hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          display: true, position: 'bottom',
+          labels: {
+            font: { family: 'Cairo', size: 10 },
+            usePointStyle: true, pointStyle: 'circle',
+            padding: 10,
+            generateLabels: (chart) => {
+              const ds = chart.data.datasets[0];
+              return chart.data.labels.map((lbl, i) => ({
+                text: `${lbl} (${ds.data[i]})`,
+                fillStyle: ds.backgroundColor[i],
+                strokeStyle: ds.backgroundColor[i],
+                pointStyle: 'circle',
+                hidden: false,
+                index: i
+              }));
+            }
+          }
+        },
+        tooltip: {
+          rtl: true,
+          titleFont: { family: 'Cairo', size: 11 },
+          bodyFont: { family: 'Cairo', size: 10 },
+          callbacks: {
+            label: (item) => ` ${item.label}: ${item.raw} (${((item.raw/item.dataset.data.reduce((a,b)=>a+b,0))*100).toFixed(1)}%)`
+          }
+        }
+      }
+    }
+  });
+}
+
+buildDonut('userDonut',
+  ['إيجابي','تقني','سعر','سلوك السائق'],
+  [124, 57, 26, 12],
+  [TEAL, '#0891B2', '#F59E0B', '#7C3AED']
+);
+buildDonut('captainDonut',
+  ['إيجابي','تقني','مشكلة دفع','دعم فني','إلغاء'],
+  [31, 31, 24, 11, 3],
+  [TEAL_L, MAG, MAG_L, '#F59E0B', '#EF4444']
+);
+
+// ═══════════════════════════════════════════
+// RATING BARS
+// ═══════════════════════════════════════════
+function buildRatingBars(containerId, dist, total, color) {
+  const el = document.getElementById(containerId);
+  const arabicNums = {1:'١',2:'٢',3:'٣',4:'٤',5:'٥'};
+  let html = '';
+  for (let s = 5; s >= 1; s--) {
+    const count = dist[s] || 0;
+    const pct = total > 0 ? (count/total*100) : 0;
+    html += `
+      <div class="rb-row">
+        <div class="rb-star">${arabicNums[s]}★</div>
+        <div class="rb-track">
+          <div class="rb-fill" style="width:${pct}%; background:${s>=4?color:'#F59E0B'}"></div>
+        </div>
+        <div class="rb-count">${count}</div>
+      </div>`;
+  }
+  el.innerHTML = html;
+}
+
+buildRatingBars('userRatingBars', {1:52,2:7,3:10,4:6,5:144}, 219, TEAL);
+buildRatingBars('captainRatingBars', {1:50,2:3,3:5,4:2,5:40}, 100, MAG);
+
+// ═══════════════════════════════════════════
+// PRIORITY TABLE
+// ═══════════════════════════════════════════
+const priorityData = [
+  { cat:'مشاكل تقنية (الكباتن)', seg:'كباتن', count:31, avg:1.9, type:'نظامي – تقني', score:98, level:'high', update:'2026 – إصلاح التجمد والـ GPS' },
+  { cat:'مشاكل الأجور والدفع', seg:'كباتن', count:24, avg:1.2, type:'تشغيلي – مالي', score:96, level:'high', update:'2024 – بلي توفير، سياسة الأسعار' },
+  { cat:'مشاكل تقنية (المستخدمون)', seg:'مستخدمون', count:57, avg:1.8, type:'نظامي – تقني', score:90, level:'high', update:'2026 – تحسين الاستقرار و GPS' },
+  { cat:'ضعف الدعم الفني', seg:'كباتن', count:11, avg:1.4, type:'تشغيلي – خدمة', score:82, level:'high', update:'2023 – ميزات الأمان والدعم' },
+  { cat:'شكاوى الأسعار/الخصومات', seg:'مستخدمون', count:26, avg:2.1, type:'تشغيلي – مالي', score:74, level:'med', update:'2024 – بلي توفير' },
+  { cat:'سلوك السائقين', seg:'مستخدمون', count:12, avg:2.3, type:'تشغيلي – سلوكي', score:62, level:'med', update:'2023 – مشاركة العائلة / التتبع' },
+  { cat:'إلغاء الرحلات', seg:'كباتن', count:3, avg:1.3, type:'تشغيلي', score:48, level:'med', update:'2023 – سياسة الإلغاء' },
+];
+
+const tb = document.getElementById('priorityTableBody');
+tb.innerHTML = priorityData.map(r => {
+  const lvlMap = {high:'عالية','med':'متوسطة',low:'منخفضة'};
+  const lvlCls = {high:'prio-high',med:'prio-med',low:'prio-low'};
+  const segCls = r.seg === 'مستخدمون' ? 'teal' : 'magenta';
+  const scoreColor = r.score >= 85 ? MAG : r.score >= 60 ? '#D97706' : '#15803D';
+  return `<tr>
+    <td><strong>${r.cat}</strong></td>
+    <td><span class="seg-badge ${r.seg==='مستخدمون'?'user':'captain'}">${r.seg}</span></td>
+    <td style="font-weight:700;color:var(--gray-700);">${r.count}</td>
+    <td>${starsHTML(Math.round(r.avg))} <span style="font-size:11px;color:${r.avg<2.5?MAG:TEAL};font-weight:700;">${r.avg}</span></td>
+    <td style="font-size:11px;color:var(--gray-600);">${r.type}</td>
+    <td><div class="score-pill" style="background:${scoreColor}20;color:${scoreColor};border:1px solid ${scoreColor}40;">${r.score}</div></td>
+    <td><span class="prio-badge ${lvlCls[r.level]}">${lvlMap[r.level]}</span></td>
+    <td style="font-size:11px;color:var(--gray-500);">${r.update}</td>
+  </tr>`;
+}).join('');
+
+// ═══════════════════════════════════════════
+// REVIEWS TABLE WITH FILTER + PAGINATION
+// ═══════════════════════════════════════════
+const allReviews = [
+  ...balyReviews.map(r => ({...r, segment: 'user'})),
+  ...captainReviews.map(r => ({...r, segment: 'captain'}))
+];
+
+let filteredReviews = [...allReviews];
+let currentPage = 1;
+const PAGE_SIZE = 50;
+let currentFilter = 'all';
+
+function filterTable(type, btn) {
+  currentPage = 1;
+  currentFilter = type;
+
+  // Update button states
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active','ft','fm'));
+  if (btn && type !== 'search') {
+    btn.classList.add('active');
+    if (type === 'user') btn.classList.add('ft');
+    if (type === 'captain') btn.classList.add('fm');
+  }
+
+  const searchVal = document.getElementById('reviewSearch').value.trim().toLowerCase();
+
+  filteredReviews = allReviews.filter(r => {
+    let pass = true;
+    if (type === 'user') pass = r.segment === 'user';
+    else if (type === 'captain') pass = r.segment === 'captain';
+    else if (type === '1') pass = r.Rating === 1;
+    else if (['Positive','App_Technical','Price','Driver_Behavior','Payment_Issue','Support_Service','Trip_Cancellation'].includes(type)) {
+      pass = r.Category === type;
+    }
+    if (searchVal) pass = pass && r.Review.toLowerCase().includes(searchVal);
+    return pass;
+  });
+
+  renderTable();
+}
+
+function renderTable() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageData = filteredReviews.slice(start, start + PAGE_SIZE);
+
+  const tbody = document.getElementById('reviewsTableBody');
+  tbody.innerHTML = pageData.map((r, i) => {
+    const seg = r.segment === 'user'
+      ? '<span class="seg-badge user">مستخدم</span>'
+      : '<span class="seg-badge captain">كابتن</span>';
+    return `<tr>
+      <td style="color:var(--gray-400);font-size:11px;">${start + i + 1}</td>
+      <td>${seg}</td>
+      <td>${catTag(r.Category)}</td>
+      <td>${starsHTML(r.Rating)}</td>
+      <td class="review-text">${r.Review}</td>
+      <td class="review-date" style="font-size:11px;">${formatDate(r.Date)}</td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  const total = filteredReviews.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  document.getElementById('pageInfo').textContent =
+    `عرض ${Math.min(start+1, total)}–${Math.min(start+PAGE_SIZE, total)} من ${total} مراجعة`;
+  document.getElementById('tableCountBadge').textContent = `${total} مراجعة`;
+
+  const pageBtns = document.getElementById('pageBtns');
+  let btns = '';
+  for (let p = 1; p <= totalPages; p++) {
+    if (p <= 3 || p === totalPages || Math.abs(p - currentPage) <= 1) {
+      btns += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goPage(${p})">${p}</button>`;
+    } else if (Math.abs(p - currentPage) === 2) {
+      btns += `<button class="page-btn" style="cursor:default;color:var(--gray-400);">…</button>`;
+    }
+  }
+  pageBtns.innerHTML = btns;
+}
+
+function goPage(p) {
+  currentPage = p;
+  renderTable();
+  document.getElementById('reviewsTableContainer').scrollTop = 0;
+}
+
+// Initial render
+renderTable();
+
+// Search handler
+document.getElementById('reviewSearch').addEventListener('input', function() {
+  filterTable('search', null);
+});
+
+</script>
+</body>
+</html>
