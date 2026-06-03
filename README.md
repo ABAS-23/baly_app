@@ -6,7 +6,7 @@ A data-driven sentiment analysis of **Baly** — Iraq's leading ride-sharing and
 
 ## 📊 Interactive Dashboard
 
-[![Open Interactive Dashboard](https://htmlpreview.github.io/?https://raw.githubusercontent.com/ABAS-23/baly_app/main/baly_dashboard.html)
+[![Open Interactive Dashboard]("C:\Users\smart touch\Downloads\baly_dashboard.html")
 
 ---
 
